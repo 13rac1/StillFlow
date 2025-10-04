@@ -38,6 +38,9 @@ dependencies:
   # Audio playback
   just_audio: ^0.9.40
 
+  # Background audio and media controls
+  audio_service: ^0.18.15
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

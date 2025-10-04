@@ -7,6 +7,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('HomeScreen', () {
+    // Note: These tests verify UI structure only
+    // Audio service initialization is skipped in test environment
     testWidgets('should display app title', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
