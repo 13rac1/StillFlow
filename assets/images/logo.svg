@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle (optional, for contrast) -->
+  <circle cx="256" cy="256" r="256" fill="#1a1a2e"/>
+
+  <!-- Gradient for water drop highlight -->
+  <defs>
+    <radialGradient id="dropGradient" cx="65%" cy="55%">
+      <stop offset="0%" style="stop-color:#ffffff; stop-opacity:0.8"/>
+      <stop offset="50%" style="stop-color:#7ec8ff; stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#4a9eff; stop-opacity:1"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer ripple (most transparent) -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#4a9eff" stroke-width="14" opacity="0.3"/>
+
+  <!-- Middle ripple -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#4a9eff" stroke-width="16" opacity="0.5"/>
+
+  <!-- Inner ripple -->
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#4a9eff" stroke-width="18" opacity="0.7"/>
+
+  <!-- Water drop (20% larger) -->
+  <path d="M 256 30
+           C 256 30, 200 120, 200 170
+           C 200 215, 222 245, 256 245
+           C 290 245, 312 215, 312 170
+           C 312 120, 256 30, 256 30 Z"
+        fill="url(#dropGradient)"/>
+</svg>
