@@ -73,6 +73,65 @@ flutter test --coverage
 flutter test test/models/sound_test.dart
 ```
 
+## Development Testing
+
+### Testing on Android Device
+
+1. **Enable Developer Options:**
+   - Go to Settings → About Phone
+   - Tap "Build Number" 7 times until you see "You are now a developer"
+
+2. **Enable USB Debugging:**
+   - Go to Settings → Developer Options
+   - Enable "USB Debugging"
+
+3. **Connect and verify device:**
+   ```bash
+   # Connect via USB cable
+   # On your device, approve the "Allow USB debugging" prompt
+
+   # Verify device is connected
+   flutter devices
+   ```
+
+4. **Run the app:**
+   ```bash
+   flutter run
+   # Or specify device if you have multiple
+   flutter run -d <device-id>
+   ```
+
+### Testing Background Audio
+
+Once running on device, verify the core functionality:
+
+1. **Play a sound** - Tap Rain or Flowing Water
+2. **Test background playback** - Press home button → verify audio continues
+3. **Test lock screen** - Lock device → verify audio continues
+4. **Test notification controls** - Check notification panel → tap play/pause
+5. **Test seamless looping** - Let audio play for several minutes to verify no gaps
+
+### Troubleshooting
+
+**Device not showing?**
+```bash
+# Check ADB connection
+flutter doctor -v
+
+# Restart ADB server
+adb kill-server
+adb start-server
+adb devices
+```
+
+**Build fails?**
+```bash
+# Clean and rebuild
+flutter clean
+flutter pub get
+flutter run
+```
+
 ## Project Structure
 
 ```
