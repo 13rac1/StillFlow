@@ -66,8 +66,22 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/logo-1024.png"
+  image_path_ios: "assets/images/logo-ios-1024.png"
+  image_path_ios_tinted_grayscale: "assets/images/logo-ios-1024.png"
+  desaturate_tinted_to_grayscale_ios: true
   adaptive_icon_background: "#1a1a2e"
   adaptive_icon_foreground: "assets/images/logo-1024.png"
+  macos:
+    generate: true
+    image_path: "assets/images/logo-ios-1024.png"
+  web:
+    generate: true
+    image_path: "assets/images/logo-1024.png"
+    background_color: "#1a1a2e"
+  windows:
+    generate: true
+    image_path: "assets/images/logo-1024.png"
+    icon_size: 256
 
 # Flutter Native Splash configuration
 flutter_native_splash:
