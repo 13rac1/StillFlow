@@ -4,6 +4,10 @@ An open-source Flutter sleep and meditation sounds app that brings nature's most
 
 ![StillFlow Home Screen](docs/StillFlow-Home.png)
 
+## Status
+
+I built this in less than a day. Publishing to Github is a good stopping point. Publishing to the app stores is a task for the future.
+
 ## Features
 
 - 🌧️ **Ambient Sounds** - Rain and flowing water with true gapless looping
