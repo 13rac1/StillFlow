@@ -27,7 +27,7 @@
 - **Audio Engine**: Integration with `just_audio` package for robust playbook
 - **Media Session**: Platform-specific media session handling
 - **Local Storage**: All audio files bundled with app installation
-- **Open Source**: MIT licensed with full source code availability on GitHub
+- **Open Source**: AGPL licensed with full source code availability on GitHub
 
 ## Platform-Specific Requirements
 

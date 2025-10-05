@@ -29,14 +29,14 @@ class SoundLibrary {
   static const Sound rain = Sound(
     id: 'rain',
     name: 'Rain',
-    assetPath: 'assets/audio/rain-sounds-ambience-351115.mp3',
+    assetPath: 'assets/audio/rain-sounds-ambience-351115.ogg',
     description: 'Gentle rain ambience',
   );
 
   static const Sound flowingWater = Sound(
     id: 'flowing_water',
     name: 'Flowing Water',
-    assetPath: 'assets/audio/flowing-water-loop-1-183953.mp3',
+    assetPath: 'assets/audio/flowing-water-loop-1-183953.ogg',
     description: 'Peaceful flowing water',
   );
 
