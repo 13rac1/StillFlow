@@ -1,20 +1,26 @@
-# Still Flow - Product Requirements Document
+# StillFlow - Product Requirements Document
 
 ## Product Overview
 
-**Still Flow** is an open-source Flutter mobile application that brings nature's most calming audio directly to your device with seamless media controls and complete offline functionality. The app provides ambient sleep sounds including rain, ocean waves, and pink noise, targeting users seeking a simple, distraction-free sleep aid without ads or data collection.
+**StillFlow** is an open-source Flutter application that brings nature's most calming audio directly to your device with seamless media controls and complete offline functionality. The app provides ambient sleep sounds with true gapless looping, targeting users seeking a simple, distraction-free sleep aid without ads or data collection.
+
+**Platforms**: Android, iOS, and macOS (tested and working)
 
 ## Core Features
 
-### Audio Playbook
-- **Built-in Sound Library**: Core sounds include rain, ocean waves, pink noise, plus expanded natural soundscapes:
-  - Water sounds: babbling brook, gentle waterfall, stream flowing, light rain on roof
-  - Forest ambiance: wind through pine trees, cricket symphony, crackling campfire
-  - Atmospheric: desert wind, cave ambiance, mountain stream with birds
-- **System Media Integration**: Full integration with Android/iOS notification panel media controls
-- **Playbook Controls**: Play, pause, volume adjustment, and seamless loop functionality
-- **Sleep Timer**: Configurable auto-stop timer (15 min, 30 min, 1 hour, 2 hours, custom)
-- **Background Playbook**: Continues playing when app is minimized or screen is locked
+### Audio Playback
+- **Built-in Sound Library**: Currently implemented ambient sounds:
+  - Rain sounds - Gentle rain ambience
+  - Flowing water - Peaceful stream sounds
+  - Menu loop - Calm background music
+- **Gapless Looping**: True gapless looping at the native level using flutter_soloud (no gaps between loop points)
+- **System Media Integration**: Full integration with platform media controls:
+  - Android: Notification panel with media controls
+  - iOS: Control Center and lock screen controls
+  - macOS: Native media controls in menu bar and Now Playing widget
+- **Playback Controls**: Play, pause, and seamless sound switching
+- **Background Playback**: Continues playing when app is minimized or screen is locked
+- **Low Latency**: Responsive controls with minimal audio delay
 
 ### User Interface
 - **Dark Mode Only**: Minimal, sleep-friendly interface with warm color palette
@@ -23,55 +29,76 @@
 - **Accessibility**: Screen reader support and large touch targets
 
 ### Technical Architecture
-- **Flutter Framework**: Cross-platform development for Android and iOS
-- **Audio Engine**: Integration with `just_audio` package for robust playbook
-- **Media Session**: Platform-specific media session handling
-- **Local Storage**: All audio files bundled with app installation
-- **Open Source**: AGPL licensed with full source code availability on GitHub
+- **Flutter Framework**: Cross-platform development for Android, iOS, and macOS
+- **Audio Engine**:
+  - **flutter_soloud**: Native SoLoud integration for gapless, low-latency audio playback
+  - **audio_service**: System integration for media controls and notifications
+  - **audio_session**: Audio focus and session management
+- **Media Controls**: Platform-specific media session handling via audio_service
+- **Local Storage**: All audio files bundled with app installation (OGG Vorbis format)
+- **Open Source**: AGPL-3.0 licensed with full source code availability on GitHub
 
 ## Platform-Specific Requirements
 
-### Android
+### Android (Tested ✅)
 - **Minimum SDK**: Android 6.0 (API level 23)
-- **Permissions**: WAKE_LOCK for background playbook
-- **Media Controls**: Android MediaSession integration
-- **Notification**: Rich media notification with album art and controls
+- **Permissions**: WAKE_LOCK, FOREGROUND_SERVICE, FOREGROUND_SERVICE_MEDIA_PLAYBACK
+- **Media Controls**: audio_service integration with MediaSession
+- **Notification**: Rich media notification with play/pause controls
+- **Package ID**: com.x13rac1.stillflow
 
-### iOS
+### iOS (Tested ✅)
 - **Minimum Version**: iOS 12.0
-- **Background Audio**: AVAudioSession configuration for background playbook
+- **Background Audio**: AVAudioSession configuration for background playback
 - **Control Center**: Integration with iOS Control Center media controls
 - **Lock Screen**: Media controls on lock screen
+- **App Icon**: iOS 18+ tinted mode support with grayscale icons
+- **Bundle ID**: com.x13rac1.stillflow
+
+### macOS (Tested ✅)
+- **Minimum Version**: macOS 10.14
+- **Media Controls**: Native macOS Now Playing integration
+- **Menu Bar**: System media controls accessible from menu bar
+- **Background Playback**: Continues playing when app is not focused
+- **Bundle ID**: com.x13rac1.stillflow
 
 ## Non-Functional Requirements
 
 ### Performance
-- **App Size**: Target under 75MB with expanded bundled audio files
-- **Battery Optimization**: Efficient background processing
-- **Memory Usage**: Minimal RAM footprint during playbook
-- **Audio Quality**: High-quality compressed audio files (AAC/MP3)
+- **App Size**: ~15MB with bundled audio files and icons
+- **Battery Optimization**: Efficient background processing with flutter_soloud
+- **Memory Usage**: Minimal RAM footprint during playback
+- **Audio Quality**: High-quality OGG Vorbis files (44.1kHz, stereo)
+- **Gapless Playback**: Zero-gap looping at native level
+- **Low Latency**: Responsive playback controls with minimal delay
 
 ### User Experience & Privacy
 - **Launch Time**: App ready to play within 2 seconds
 - **Complete Offline Functionality**: No internet connection required
 - **Zero Data Collection**: No telemetry, analytics, or user tracking
 - **Ad-Free Experience**: No advertisements or monetization
-- **Reliability**: 99.9% uptime for local playbook functionality
+- **Reliability**: Robust local playback with proper error handling
+- **Branding**: Custom water drop + ripples logo optimized for all platforms
 
 ## Audio Content Strategy
 
-### Expanded Sound Library
-- **Primary Sounds**: Rain, ocean waves, pink noise, brown noise
-- **Water Collection**: Gentle waterfall, babbling brook, stream flowing, rain on leaves
+### Current Sound Library (v1.0)
+- **Rain sounds** - Gentle rain ambience
+- **Flowing water** - Peaceful stream sounds
+- **Menu loop** - Calm background music
+
+### Future Sound Expansions
+- **Water Collection**: Ocean waves, gentle waterfall, babbling brook, rain on leaves
 - **Forest Collection**: Wind through trees, cricket symphony, campfire crackling
 - **Atmospheric Collection**: Desert wind, cave ambiance, mountain streams
-- **Seasonal Blends**: Spring meadow, autumn forest, winter cabin ambiance
+- **Noise Generators**: Pink noise, brown noise, white noise
 
 ### Audio File Management
-- **Format**: AAC or high-quality MP3 for optimal compression
-- **Duration**: 10-30 minute seamless loops for each sound
-- **File Size**: Individual files 8-15MB each
+- **Format**: OGG Vorbis for gapless looping support and compression
+- **Duration**: Seamless loops designed for flutter_soloud's gapless playback
+- **File Size**: ~5-6MB per file (OGG compression)
 - **Quality**: 44.1kHz sample rate, stereo
+- **Compatibility**: Cross-platform support (Android, iOS, macOS)
 
 ## Open Source Considerations
 
@@ -103,32 +130,46 @@
 
 ## Development Timeline
 
-### Phase 1 (Weeks 1-4)
+### Phase 1 - Foundation (✅ Completed)
 - Repository setup with comprehensive README
 - Core Flutter app structure and navigation
-- Audio playbook implementation with just_audio
-- Basic UI with initial sound selection
+- Audio playback implementation with flutter_soloud
+- Basic UI with sound selection
 - Android media session integration
 
-### Phase 2 (Weeks 5-8)
+### Phase 2 - Platform Integration (✅ Completed)
 - iOS media session implementation
-- Sleep timer functionality
-- Background playbook optimization
-- Expanded sound library integration
-- Dark theme refinement
+- macOS support and testing
+- Background playback optimization
+- Dark theme implementation
+- Custom app icon design and integration
 
-### Phase 3 (Weeks 9-12)
-- Audio file optimization and bundling
-- Comprehensive testing across devices
-- F-Droid and app store preparation
+### Phase 3 - Audio Engine Migration (✅ Completed)
+- Migration from just_audio to flutter_soloud
+- Gapless looping implementation
+- Audio file conversion to OGG format
+- audio_service integration for media controls
+- Error handling and hot restart support
+
+### Phase 4 - Polish & Testing (✅ Completed)
+- Comprehensive testing across Android, iOS, and macOS devices
+- Package identifier updates (com.x13rac1.stillflow)
+- App branding finalization (StillFlow)
+- iOS 18+ tinted icon support
+- Platform-specific icon optimization
 - Documentation completion
-- Community contribution guidelines
 
-### Phase 4 (Weeks 13-16)
-- Beta testing with community
-- Performance optimization
-- Accessibility improvements
-- First stable release
-- Marketing to open-source communities
+### Future Phases
+- **Phase 5**: Sleep timer functionality
+- **Phase 6**: Expanded sound library
+- **Phase 7**: F-Droid and app store releases
+- **Phase 8**: Community contribution guidelines
 
-This updated PRD reflects the open-source nature, expanded natural sound library, and the "Still Flow" branding while maintaining focus on privacy, offline functionality, and seamless media integration.
+## Current Status
+
+**Version**: 1.0.0
+**Platforms Tested**: Android 6.0+, iOS 12.0+, macOS 10.14+
+**Audio Engine**: flutter_soloud with audio_service
+**Key Achievement**: True gapless looping with full platform media control integration
+
+This updated PRD reflects the current implementation using flutter_soloud for gapless audio, cross-platform support (Android, iOS, macOS), and the "StillFlow" branding while maintaining focus on privacy, offline functionality, and seamless media integration.

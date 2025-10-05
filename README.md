@@ -1,15 +1,16 @@
-# Still Flow
+# StillFlow
 
 An open-source Flutter sleep and meditation sounds app that brings nature's most calming audio directly to your device with seamless media controls and complete offline functionality.
 
 ## Features
 
-- 🌧️ **Ambient Sounds** - Rain and flowing water with seamless looping
+- 🌧️ **Ambient Sounds** - Rain and flowing water with true gapless looping
 - 🌙 **Dark Theme** - Sleep-friendly interface with warm, low-brightness colors
 - 🔄 **Background Playback** - Audio continues when app is minimized or screen is locked
-- 📱 **Media Controls** - Play/pause from notification (Android) or Control Center (iOS)
+- 📱 **Media Controls** - Play/pause from notification (Android) or Control Center (iOS/macOS)
 - 🔇 **Completely Offline** - No internet connection required
 - 🔒 **Privacy First** - Zero data collection, no analytics, no ads
+- 🎵 **Gapless Looping** - Powered by flutter_soloud for seamless, low-latency audio
 
 ## Getting Started
 
@@ -24,8 +25,8 @@ An open-source Flutter sleep and meditation sounds app that brings nature's most
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/stillflow.git
-   cd stillflow
+   git clone https://github.com/13rac1/StillFlow.git
+   cd StillFlow
    ```
 
 2. Install dependencies:
@@ -58,6 +59,12 @@ flutter build apk --release
 ```bash
 flutter build ios --release
 # Open ios/Runner.xcworkspace in Xcode to archive and export
+```
+
+**macOS:**
+```bash
+flutter build macos --release
+# App will be at: build/macos/Build/Products/Release/StillFlow.app
 ```
 
 ## Running Tests
@@ -140,12 +147,16 @@ lib/
 ├── models/
 │   └── sound.dart           # Sound data model
 ├── screens/
-│   └── home_screen.dart     # Main screen
+│   └── home_screen.dart     # Main screen with audio controls
 ├── services/
-│   ├── audio_handler.dart   # Background audio handler
-│   └── audio_player_service.dart
+│   ├── audio_handler.dart   # Audio service handler for media controls
+│   └── audio_service.dart   # flutter_soloud audio engine wrapper
 └── widgets/
-    └── sound_tile.dart      # Sound selection tile
+    └── sound_tile.dart      # Sound selection tile widget
+
+assets/
+├── audio/                    # Ambient sound loops (.ogg format)
+└── images/                   # App icons and branding
 
 test/
 ├── models/
@@ -157,17 +168,27 @@ test/
 ## Audio Files
 
 The app includes ambient sound loops in `assets/audio/`:
-- Rain sounds (5.7MB)
-- Flowing water (5.5MB)
+- Rain sounds - Gentle rain ambience (OGG format, 5.7MB)
+- Flowing water - Peaceful stream sounds (OGG format, 5.5MB)
+- Menu loop - Calm background music (OGG format)
 
-Total app size: ~12MB with audio assets
+Audio files use OGG Vorbis format for:
+- High quality compression
+- Gapless looping support
+- Cross-platform compatibility
+
+Total app size: ~15MB with audio assets and icons
 
 ## Platform Support
 
-- ✅ Android 6.0+ (API level 23)
-- ✅ iOS 12.0+
-- ❌ Web (not supported - background audio limitations)
-- ❌ Desktop (not currently supported)
+### Tested & Working
+- ✅ **Android 6.0+** (API level 23) - Full media controls and background playback
+- ✅ **iOS 12.0+** - Control Center integration and background audio
+- ✅ **macOS 10.14+** - Native desktop experience with media controls
+
+### Not Supported
+- ❌ **Web** - Background audio limitations in browsers
+- ❌ **Windows/Linux** - Desktop platforms not currently supported
 
 ## License
 
@@ -177,8 +198,23 @@ This project is licensed under the AGPL-3.0 License - see the [LICENSE](LICENSE.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Technical Details
+
+### Audio Engine
+- **flutter_soloud** - Low-latency, gapless audio playback with native SoLoud integration
+- **audio_service** - System integration for media controls and notifications
+- **audio_session** - Audio focus and session management
+
+### Key Features
+- True gapless looping at the native level (no gaps between loop points)
+- Low-latency audio playback for responsive controls
+- Background audio support with proper session management
+- Media controls integration (notifications, lock screen, Control Center)
+- Proper audio focus handling (pauses when other apps need audio)
+
 ## Acknowledgments
 
 - Audio files sourced from royalty-free libraries
 - Built with [Flutter](https://flutter.dev)
-- Audio powered by [just_audio](https://pub.dev/packages/just_audio) and [audio_service](https://pub.dev/packages/audio_service)
+- Audio powered by [flutter_soloud](https://pub.dev/packages/flutter_soloud) and [audio_service](https://pub.dev/packages/audio_service)
+- App icon: Custom water drop with ripples design
