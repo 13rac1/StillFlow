@@ -4,6 +4,10 @@ import '../models/sound.dart';
 import '../services/audio_handler.dart';
 import '../widgets/sound_tile.dart';
 
+// Global handler to prevent multiple initializations
+StillFlowAudioHandler? _globalAudioHandler;
+bool _isInitializing = false;
+
 /// Main screen displaying the sound library
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   StillFlowAudioHandler? _audioHandler;
   Sound? _currentSound;
   bool _isPlaying = false;
-  bool _isInitializing = true;
+  bool _isLoading = true;
   String? _errorMessage;
 
   @override
@@ -27,6 +31,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAudio() async {
     try {
+      // Use global handler if already initialized
+      if (_globalAudioHandler != null) {
+        _audioHandler = _globalAudioHandler;
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Skip if initialization is in progress
+      if (_isInitializing) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      _isInitializing = true;
+
       // Initialize audio service handler
       _audioHandler = await AudioService.init(
         builder: () => StillFlowAudioHandler(),
@@ -37,6 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
           androidShowNotificationBadge: false,
         ),
       );
+
+      // Store globally to reuse
+      _globalAudioHandler = _audioHandler;
+      _isInitializing = false;
 
       // Listen to playback state changes
       _audioHandler?.playbackState.listen((state) {
@@ -49,16 +80,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _isInitializing = false;
+          _isLoading = false;
         });
       }
     } catch (e) {
+      _isInitializing = false;
+
+      // Check if error is due to database lock (concurrent initialization)
+      final errorStr = e.toString();
+      if (errorStr.contains('database is locked') ||
+          errorStr.contains('SQLITE_BUSY')) {
+        // Use existing global handler if available
+        if (_globalAudioHandler != null) {
+          _audioHandler = _globalAudioHandler;
+        }
+      }
+
       // In test environment or if audio service fails to initialize,
       // continue without background audio support
       if (mounted) {
         setState(() {
-          _isInitializing = false;
-          _errorMessage = 'Audio service unavailable';
+          _isLoading = false;
+          if (_audioHandler == null) {
+            _errorMessage = 'Audio service unavailable';
+          }
         });
       }
       print('Audio service initialization failed: $e');
@@ -105,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      body: _isInitializing
+      body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(),
             )
@@ -134,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         FilledButton.tonal(
                           onPressed: () {
                             setState(() {
-                              _isInitializing = true;
+                              _isLoading = true;
                               _errorMessage = null;
                             });
                             _initializeAudio();
