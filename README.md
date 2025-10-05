@@ -55,22 +55,48 @@ I built this in less than a day. Publishing to Github is a good stopping point. 
 
 ### Building for Release
 
-**Android:**
+Use the included Makefile for easy building:
+
 ```bash
-flutter build apk --release
-# APK will be at: build/app/outputs/flutter-apk/app-release.apk
+# Show all available commands
+make help
+
+# Build for specific platforms
+make build-android      # Build Android APK
+make build-macos        # Build macOS app
+make build-linux        # Build Linux app
+make build-dmg          # Build macOS DMG installer (requires: brew install create-dmg)
+
+# Build everything
+make build-all
+
+# Prepare releases (copies to releases/ folder with version number)
+make release-android    # Creates releases/StillFlow-1.0.0-android.apk
+make release-macos      # Creates releases/StillFlow-1.0.0.dmg
+make release-linux      # Creates releases/StillFlow-1.0.0-linux-x64.tar.gz
 ```
 
-**iOS:**
+**Manual builds:**
+
+Android:
+```bash
+flutter build apk --release
+```
+
+iOS:
 ```bash
 flutter build ios --release
 # Open ios/Runner.xcworkspace in Xcode to archive and export
 ```
 
-**macOS:**
+macOS:
 ```bash
 flutter build macos --release
-# App will be at: build/macos/Build/Products/Release/StillFlow.app
+```
+
+Linux:
+```bash
+flutter build linux --release
 ```
 
 ## Running Tests
@@ -190,10 +216,11 @@ Total app size: ~15MB with audio assets and icons
 - ✅ **Android 6.0+** (API level 23) - Full media controls and background playback
 - ✅ **iOS 12.0+** - Control Center integration and background audio
 - ✅ **macOS 10.14+** - Native desktop experience with media controls
+- ✅ **Linux** - Desktop experience with media controls
 
 ### Not Supported
 - ❌ **Web** - Background audio limitations in browsers
-- ❌ **Windows/Linux** - Desktop platforms not currently supported
+- ❌ **Windows** - Not currently supported
 
 ## License
 
