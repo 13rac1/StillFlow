@@ -1,20 +1,13 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
-import 'package:audio_session/audio_session.dart';
 import '../models/sound.dart';
 
-/// Audio service for gapless looping playback using flutter_soloud
+/// Audio handler that wraps flutter_soloud with audio_service for media controls
 ///
-/// flutter_soloud provides:
-/// - True gapless looping at the native level
-/// - Low-latency audio playback
-/// - Background audio support
-/// - Cross-platform consistency
-class AudioService {
-  static final AudioService _instance = AudioService._();
-  static AudioService get instance => _instance;
-
-  AudioService._();
-
+/// This combines:
+/// - flutter_soloud: Native gapless looping
+/// - audio_service: System media controls and notifications
+class SoLoudAudioHandler extends BaseAudioHandler {
   final SoLoud _soloud = SoLoud.instance;
 
   // Track loaded sounds and their handles
@@ -22,54 +15,21 @@ class AudioService {
   SoundHandle? _currentHandle;
   Sound? _currentSound;
 
-  bool get isInitialized => _soloud.isInitialized;
-  bool get isPlaying => _currentHandle != null;
+  bool get isPlaying => _currentHandle != null && playbackState.value.playing;
   Sound? get currentSound => _currentSound;
 
-  /// Initialize the audio engine
-  Future<void> init() async {
-    try {
-      // Configure audio session for media controls
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playback,
-        avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
-        avAudioSessionMode: AVAudioSessionMode.defaultMode,
-        avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
-        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-        androidAudioAttributes: AndroidAudioAttributes(
-          contentType: AndroidAudioContentType.music,
-          usage: AndroidAudioUsage.media,
-        ),
-        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-        androidWillPauseWhenDucked: true,
-      ));
-
-      // Always try to initialize - SoLoud handles already-initialized state internally
-      if (!_soloud.isInitialized) {
-        await _soloud.init();
-        print('✅ flutter_soloud initialized successfully');
-      } else {
-        print('✅ flutter_soloud already initialized');
-      }
-    } catch (e) {
-      // If init fails, deinit and retry once
-      print('⚠️  Initialization error, retrying: $e');
-      try {
-        _soloud.deinit();
-        await _soloud.init();
-        print('✅ flutter_soloud initialized successfully on retry');
-      } catch (retryError) {
-        print('❌ Error initializing flutter_soloud after retry: $retryError');
-        rethrow;
-      }
+  /// Initialize flutter_soloud
+  Future<void> initSoloud() async {
+    if (!_soloud.isInitialized) {
+      await _soloud.init();
+      print('✅ flutter_soloud initialized in handler');
     }
   }
 
   /// Load a sound from assets
   Future<void> loadSound(Sound sound) async {
     if (!_soloud.isInitialized) {
-      await init();
+      await initSoloud();
     }
 
     // Skip if already loaded
@@ -78,7 +38,6 @@ class AudioService {
     }
 
     try {
-      // Load with disk mode for better streaming of long files
       final audioSource = await _soloud.loadAsset(
         sound.assetPath,
         mode: LoadMode.disk,
@@ -104,6 +63,15 @@ class AudioService {
 
       final audioSource = _loadedSounds[sound.id]!;
 
+      // Update media item for notification
+      mediaItem.add(MediaItem(
+        id: sound.id,
+        title: sound.name,
+        artist: 'Still Flow',
+        album: 'Ambient Sounds',
+        duration: null, // Looping indefinitely
+      ));
+
       // Play with gapless looping
       final handle = await _soloud.play(
         audioSource,
@@ -115,38 +83,41 @@ class AudioService {
       _currentHandle = handle;
       _currentSound = sound;
 
-      print('🔊 Playing: ${sound.name} (gapless loop enabled)');
+      // Update playback state
+      _updatePlaybackState(playing: true);
+
+      print('🔊 Playing: ${sound.name} (gapless loop)');
     } catch (e) {
       print('❌ Error playing sound: $e');
       rethrow;
     }
   }
 
-  /// Pause current playback
-  Future<void> pause() async {
+  @override
+  Future<void> play() async {
     if (_currentHandle == null) return;
 
     try {
       _soloud.pauseSwitch(_currentHandle!);
-      print('⏸️  Paused playback');
-    } catch (e) {
-      print('❌ Error pausing: $e');
-    }
-  }
-
-  /// Resume current playback
-  Future<void> resume() async {
-    if (_currentHandle == null) return;
-
-    try {
-      _soloud.pauseSwitch(_currentHandle!);
-      print('▶️  Resumed playback');
+      _updatePlaybackState(playing: true);
     } catch (e) {
       print('❌ Error resuming: $e');
     }
   }
 
-  /// Stop current playback
+  @override
+  Future<void> pause() async {
+    if (_currentHandle == null) return;
+
+    try {
+      _soloud.pauseSwitch(_currentHandle!);
+      _updatePlaybackState(playing: false);
+    } catch (e) {
+      print('❌ Error pausing: $e');
+    }
+  }
+
+  @override
   Future<void> stop() async {
     if (_currentHandle == null) return;
 
@@ -154,10 +125,30 @@ class AudioService {
       _soloud.stop(_currentHandle!);
       _currentHandle = null;
       _currentSound = null;
+
+      // Clear media item
+      mediaItem.add(null);
+
+      _updatePlaybackState(playing: false);
       print('⏹️  Stopped playback');
     } catch (e) {
       print('❌ Error stopping: $e');
     }
+  }
+
+  /// Update playback state for media controls
+  void _updatePlaybackState({required bool playing}) {
+    playbackState.add(playbackState.value.copyWith(
+      controls: [
+        if (playing) MediaControl.pause else MediaControl.play,
+        MediaControl.stop,
+      ],
+      androidCompactActionIndices: const [0],
+      processingState: AudioProcessingState.ready,
+      playing: playing,
+      updatePosition: Duration.zero,
+      speed: 1.0,
+    ));
   }
 
   /// Set volume (0.0 to 1.0)
@@ -196,11 +187,9 @@ class AudioService {
       }
       _loadedSounds.clear();
 
-      // Deinitialize the engine
-      _soloud.deinit();
-      print('✅ Audio service disposed');
+      print('✅ Audio handler disposed');
     } catch (e) {
-      print('❌ Error disposing audio service: $e');
+      print('❌ Error disposing audio handler: $e');
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:audio_service/audio_service.dart';
 import '../models/sound.dart';
-import '../services/audio_service.dart';
+import '../services/audio_handler.dart';
 import '../widgets/sound_tile.dart';
 
 /// Main screen displaying the sound library
@@ -12,8 +13,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final AudioService _audioService = AudioService.instance;
+  SoLoudAudioHandler? _audioHandler;
   bool _isLoading = true;
+  bool _isPlaying = false;
   String? _errorMessage;
 
   @override
@@ -24,7 +26,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAudio() async {
     try {
-      await _audioService.init();
+      // Initialize audio service with our handler
+      _audioHandler = await AudioService.init(
+        builder: () => SoLoudAudioHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.stillflow.audio',
+          androidNotificationChannelName: 'Still Flow Audio',
+          androidNotificationOngoing: true,
+          androidShowNotificationBadge: false,
+        ),
+      );
+
+      // Initialize flutter_soloud
+      await _audioHandler!.initSoloud();
+
+      // Listen to playback state changes
+      _audioHandler!.playbackState.listen((state) {
+        if (mounted) {
+          setState(() {
+            _isPlaying = state.playing;
+          });
+        }
+      });
 
       if (mounted) {
         setState(() {
@@ -44,28 +67,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // Don't dispose the singleton service here
+    _audioHandler?.dispose();
     super.dispose();
   }
 
   Future<void> _handleSoundTap(Sound sound) async {
+    if (_audioHandler == null) return;
+
     // If tapping the currently playing sound, pause it
-    if (_audioService.currentSound?.id == sound.id && _audioService.isPlaying) {
-      await _audioService.pause();
-      setState(() {});
+    if (_audioHandler!.currentSound?.id == sound.id && _isPlaying) {
+      await _audioHandler!.pause();
       return;
     }
 
     // If tapping the current sound while paused, resume it
-    if (_audioService.currentSound?.id == sound.id && !_audioService.isPlaying) {
-      await _audioService.resume();
-      setState(() {});
+    if (_audioHandler!.currentSound?.id == sound.id && !_isPlaying) {
+      await _audioHandler!.play();
       return;
     }
 
     // Otherwise, play the new sound
-    await _audioService.playSound(sound);
-    setState(() {});
+    await _audioHandler!.playSound(sound);
   }
 
   @override
@@ -161,8 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Sound tiles
                     ...SoundLibrary.all.map((sound) {
                       final isCurrentlyPlaying =
-                          _audioService.currentSound?.id == sound.id &&
-                          _audioService.isPlaying;
+                          _audioHandler?.currentSound?.id == sound.id && _isPlaying;
                       return SoundTile(
                         sound: sound,
                         isPlaying: isCurrentlyPlaying,

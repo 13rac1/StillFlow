@@ -1,4 +1,4 @@
-name: StillFlow
+name: stillflow
 description: "A Flutter sleep and meditation sounds app that brings nature's most calming audio directly to your device with seamless media controls and complete offline functionality."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -37,6 +37,12 @@ dependencies:
 
   # Audio playback with gapless looping support
   flutter_soloud: ^3.3.7
+
+  # Background audio and media controls
+  audio_service: ^0.18.15
+
+  # Audio session for media controls and notifications
+  audio_session: ^0.1.21
 
 dev_dependencies:
   flutter_test:
