@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 
 void main() {
+  // Ensure Flutter bindings are initialized before audio service
+  WidgetsFlutterBinding.ensureInitialized();
+
   runApp(const StillFlowApp());
 }
 

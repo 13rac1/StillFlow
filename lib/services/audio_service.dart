@@ -27,16 +27,25 @@ class AudioService {
 
   /// Initialize the audio engine
   Future<void> init() async {
-    if (_soloud.isInitialized) {
-      return;
-    }
-
     try {
-      await _soloud.init();
-      print('✅ flutter_soloud initialized successfully');
+      // Always try to initialize - SoLoud handles already-initialized state internally
+      if (!_soloud.isInitialized) {
+        await _soloud.init();
+        print('✅ flutter_soloud initialized successfully');
+      } else {
+        print('✅ flutter_soloud already initialized');
+      }
     } catch (e) {
-      print('❌ Error initializing flutter_soloud: $e');
-      rethrow;
+      // If init fails, deinit and retry once
+      print('⚠️  Initialization error, retrying: $e');
+      try {
+        _soloud.deinit();
+        await _soloud.init();
+        print('✅ flutter_soloud initialized successfully on retry');
+      } catch (retryError) {
+        print('❌ Error initializing flutter_soloud after retry: $retryError');
+        rethrow;
+      }
     }
   }
 
