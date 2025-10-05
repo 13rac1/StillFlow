@@ -2,6 +2,8 @@
 
 An open-source Flutter sleep and meditation sounds app that brings nature's most calming audio directly to your device with seamless media controls and complete offline functionality.
 
+![StillFlow Home Screen](docs/StillFlow-Home.png)
+
 ## Features
 
 - 🌧️ **Ambient Sounds** - Rain and flowing water with true gapless looping
@@ -170,7 +172,6 @@ test/
 The app includes ambient sound loops in `assets/audio/`:
 - Rain sounds - Gentle rain ambience (OGG format, 5.7MB)
 - Flowing water - Peaceful stream sounds (OGG format, 5.5MB)
-- Menu loop - Calm background music (OGG format)
 
 Audio files use OGG Vorbis format for:
 - High quality compression
