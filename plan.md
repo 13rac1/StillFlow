@@ -1,239 +1,360 @@
-# Plan: Layered Environmental Sound System with Stereo Spatialization
+# Plan: Layered Environmental Sound System with 3D Spatial Audio
 
 ## Overview
 Transform the current single-sound playback into a layered audio system where each environment has:
 - **Base loop** (continuous ambient sound - existing files)
-- **Environmental layers** (toggle on/off with independent volume control and stereo positioning)
-- **Randomized events** (thunder, bird calls, etc. at natural intervals with spatial audio)
+- **Environmental layers** (toggle on/off with independent volume control and 3D positioning)
+- **Randomized events** (thunder, bird calls, etc. at natural intervals with **dynamic 3D spatial audio**)
+
+## 🎯 3D Spatial Audio Approach
+
+### Why 3D Audio Instead of Simple Stereo Pan?
+
+**Previous approach (completed in Phase 1-3):**
+- Simple pan positioning (-1.0 to 1.0)
+- Static left/right balance
+- Stereo audio files
+
+**NEW approach (Phase 3.5+):**
+- ✅ **3D positional audio** using SoLoud's `play3d()`
+- ✅ **Dynamic movement** (thunder rolling, birds flying)
+- ✅ **Distance attenuation** (near/far sounds naturally quieter)
+- ✅ **Doppler effects** for moving sounds
+- ✅ **Mono audio files** (half the size!)
+- ✅ **Immersive soundscape** (360° audio environment)
+
+### 3D Coordinate System
+```
+         Y (up)
+         |
+         |
+         |
+         0------- X (right)
+        /
+       /
+      Z (forward/back)
+
+Listener at origin (0, 0, 0)
+Looking toward -Z direction
+```
 
 ## Architecture Changes
 
 ### 1. Data Model Extensions (`lib/models/sound.dart`)
-- Add `SoundLayer` class for individual audio layers:
-  - `id`, `assetPath`, `layerType` (continuous/random)
-  - `volumeRange` (min/max volume for variation)
-  - `panRange` (left/right stereo positioning: -1.0 to 1.0)
-  - `intervalRange` (for random events: min/max seconds)
-- Add `EnvironmentSound` class extending `Sound` with:
-  - Base sound reference
-  - List of available layers
-  - Default layer states (enabled/disabled)
-  - Stereo field configuration
-- Update `SoundLibrary` to use environment sounds
+- ✅ Add `SoundLayer` class for individual audio layers (COMPLETED)
+- ✅ Add `EnvironmentSound` class extending `Sound` (COMPLETED)
+- 🔄 **UPDATE:** Add 3D positioning fields to `SoundLayer`:
+  - `movementType` enum (static, linear, circular, random)
+  - `position3d` (Vector3 for static sounds)
+  - `startPosition3d` / `endPosition3d` (for linear movement)
+  - `circularPath` (center, radius, height for circular movement)
+  - `minDistance` / `maxDistance` (attenuation range)
+  - `dopplerFactor` (for moving sounds)
 
 ### 2. Audio Handler Refactor (`lib/services/audio_handler.dart`)
-**Major changes:**
-- Track multiple `SoundHandle` instances (base + layers) with stereo metadata
-- Implement layer management:
-  - `playEnvironment()` - plays base + enabled layers with stereo positioning
-  - `toggleLayer()` - add/remove individual layer
-  - `setLayerVolume()` - adjust layer volume independently
-  - `setLayerPan()` - adjust stereo position (-1.0 left, 0.0 center, 1.0 right)
-- Add randomization engine:
-  - Timer-based system for random events
-  - Randomized stereo positioning per event (birds on left/right, thunder panning)
-  - Configurable intervals per layer type
-  - One-shot playback for events with random pan position
-- Utilize SoLoud's `setPan()` method for stereo control
+**Completed (Phase 1):**
+- ✅ Track multiple `SoundHandle` instances (base + layers)
+- ✅ Layer management (toggleLayer, setLayerVolume)
+- ✅ Randomization engine with Timer-based events
+- ✅ Simple pan positioning
 
-### 3. Stereo Audio Implementation Details
+**NEW (Phase 3.5 - 3D Upgrade):**
+- 🔄 Initialize 3D listener: `set3dListenerPosition(0, 0, 0)`
+- 🔄 Replace `play()` with `play3d(source, x, y, z)` for layers
+- 🔄 Add position interpolation for moving sounds
+- 🔄 Call `update3dAudio()` after position changes (20-30 Hz)
+- 🔄 Implement `SoundMovement` classes:
+  - `LinearMovement` - Thunder rolling across sky
+  - `CircularMovement` - Seagulls circling overhead
+  - `RandomWalk` - Butterflies, leaves drifting
 
-**SoLoud Pan Control:**
-- Use `_soloud.setPan(handle, pan)` where pan is -1.0 (left) to 1.0 (right)
-- Apply to both continuous loops and random events
-- Randomize pan for each event trigger to create spatial variety
+### 3. 3D Audio Implementation Details
 
-**Stereo Positioning Strategy:**
-- **Base loops:** Center (pan = 0.0)
-- **Continuous layers:** Slight offset (-0.3 to 0.3 for subtle width)
-- **Random events:** Full stereo field (-1.0 to 1.0)
-  - Near thunder: Random pan, louder volume
-  - Far thunder: Random pan, quieter volume, possible reverb
-  - Birds: Randomize left/right/center on each chirp
-  - Seagulls: Pan position changes between calls
-
-**Example Stereo Configuration:**
+**Listener Setup:**
 ```dart
-// Rain environment
-- Base rain: pan = 0.0 (center)
-- Crickets: pan = -0.2 (slight left)
-- Thunder near: random pan -1.0 to 1.0, volume 0.7-1.0
-- Thunder far: random pan -1.0 to 1.0, volume 0.3-0.5
-- Birds near: random pan -1.0 to 1.0, volume 0.6-0.9
+_soloud.set3dListenerPosition(0, 0, 0);  // Origin
+_soloud.set3dListenerAt(0, 0, -1);       // Looking forward
+_soloud.set3dListenerUp(0, 1, 0);        // Up is Y-axis
+_soloud.update3dAudio();
+```
+
+**Sound Positioning Examples:**
+
+**Base Loops (Centered):**
+```dart
+// Rain ambience at origin (close, centered)
+await _soloud.play3d(audioSource, 0, 0, 0, volume: 1.0, looping: true);
+```
+
+**Continuous Layers (Positioned):**
+```dart
+// Crickets - random positions around listener
+await _soloud.play3d(audioSource, x, 0, z, volume: 0.5, looping: true);
+// x, z in range -10 to 10 (surrounding circle)
+
+// Wind - slowly moving across space
+await _soloud.play3d(audioSource, x, 2, -5, volume: 0.4, looping: true);
+// Update position periodically for movement
+```
+
+**Random Events (Dynamic Movement):**
+```dart
+// Thunder rolling left to right across sky
+Start: play3d(audioSource, -50, 20, -30)
+// Interpolate position over 3-5 seconds
+End: set3dSourcePosition(handle, 50, 20, -30)
+
+// Bird flying across soundscape
+Start: play3d(audioSource, 30, 10, -20)
+// Interpolate with Doppler
+End: set3dSourcePosition(handle, -30, 10, -20)
+
+// Seagull circling overhead
+Circular path: radius 15, center (0, 12, 0)
+// Update position continuously
+```
+
+**Distance Attenuation:**
+```dart
+// Thunder (far away)
+_soloud.set3dSourceMinMaxDistance(handle, 20.0, 100.0);
+_soloud.set3dSourceAttenuation(handle, SoLoud.LINEAR_DISTANCE, 0.5);
+
+// Birds (close)
+_soloud.set3dSourceMinMaxDistance(handle, 1.0, 30.0);
+_soloud.set3dSourceAttenuation(handle, SoLoud.LINEAR_DISTANCE, 1.0);
+
+// Crickets (very close)
+_soloud.set3dSourceMinMaxDistance(handle, 0.5, 15.0);
 ```
 
 ### 4. UI Enhancements
 
 **Sound Tile Widget (`lib/widgets/sound_tile.dart`):**
-- Add expandable section for layer controls
-- Show toggle switches for each available layer
-- Volume sliders per layer (optional, future)
-- Visual stereo field indicator (future: show pan position)
-
-**New Widget: `EnvironmentDetailSheet` (bottom sheet/modal):**
-- Detailed layer controls
-- Visual mixer interface with stereo field visualization
-- Pan position controls (optional advanced mode)
-- Randomization settings toggle
-- Preset management (future: save custom mixes)
+- ✅ Expandable section for layer controls (COMPLETED)
+- ✅ Toggle switches for each available layer (COMPLETED)
+- ✅ Visual feedback for active layers (COMPLETED)
+- Future: 3D position visualization (optional)
 
 **Home Screen (`lib/screens/home_screen.dart`):**
-- Handle layer state changes
-- Pass layer configuration to sound tiles
-- Manage bottom sheet for detail view
+- ✅ Handle layer state changes (COMPLETED)
+- ✅ Pass layer configuration to sound tiles (COMPLETED)
 
 ### 5. Audio Assets Structure
 ```
 assets/audio/
 ├── rain/
 │   ├── base/
-│   │   └── rain-ambience-stereo.ogg (existing, stereo)
+│   │   └── rain-ambience-mono.ogg (mono, for 3D positioning)
 │   ├── layers/
-│   │   ├── thunder-near-1-stereo.ogg
-│   │   ├── thunder-near-2-stereo.ogg
-│   │   ├── thunder-far-1-stereo.ogg
-│   │   ├── thunder-far-2-stereo.ogg
-│   │   ├── crickets-loop-stereo.ogg
-│   │   ├── pouring-rain-stereo.ogg
-│   │   └── light-rain-stereo.ogg
+│   │   ├── thunder-1-mono.ogg
+│   │   ├── thunder-2-mono.ogg
+│   │   ├── thunder-3-mono.ogg
+│   │   ├── crickets-loop-mono.ogg
+│   │   └── wind-gusts-mono.ogg
 ├── water/
 │   ├── base/
-│   │   └── flowing-water-stereo.ogg (existing, stereo)
+│   │   └── flowing-water-mono.ogg
 │   ├── layers/
-│   │   ├── birds-near-chirp-1-stereo.ogg
-│   │   ├── birds-near-chirp-2-stereo.ogg
-│   │   ├── birds-far-song-stereo.ogg
-│   │   ├── frogs-loop-stereo.ogg
-│   │   └── wind-reeds-stereo.ogg
+│   │   ├── bird-chirp-1-mono.ogg
+│   │   ├── bird-chirp-2-mono.ogg
+│   │   ├── bird-chirp-3-mono.ogg
+│   │   ├── frogs-mono.ogg
+│   │   └── splash-mono.ogg
 ├── ocean/ (future)
 │   ├── base/
-│   │   └── surf-loop-stereo.ogg
+│   │   └── ocean-waves-mono.ogg
 │   ├── layers/
-│   │   ├── seagulls-1-stereo.ogg
-│   │   ├── seagulls-2-stereo.ogg
-│   │   ├── bell-buoy-stereo.ogg
-│   │   └── waves-rocks-stereo.ogg
+│   │   ├── seagull-1-mono.ogg
+│   │   ├── seagull-2-mono.ogg
+│   │   ├── bell-buoy-mono.ogg
+│   │   └── ship-horn-mono.ogg
 ```
 
-**Audio File Requirements (Updated):**
-- **Format:** OGG Vorbis with stereo channels
+**Audio File Requirements (UPDATED FOR 3D AUDIO):**
+- **Format:** OGG Vorbis
+- **Channels:** **MONO (1 channel)** ← Changed from stereo!
 - **Sample Rate:** 44.1kHz
-- **Channels:** 2 (stereo)
 - **Bit Depth:** 16-bit minimum
 - **Quality:** Variable bitrate, quality 6-8
-- **Size:** 5-8MB per file (stereo typically larger than mono)
+- **Size:** 2-4MB per file (smaller than stereo)
 
-### 6. Stereo Recording/Sourcing Strategy
-- Source true stereo recordings (not dual mono)
-- For mono sources: Create stereo variants with natural ambience
-- Multiple takes per event (2-3 thunder variants, bird chirp variants)
-- Natural stereo field in recordings preferred over synthetic panning
+### 6. Audio Recording/Sourcing Strategy
+- **Use mono recordings** - SoLoud positions them in 3D space
+- Multiple takes per event (2-3 variants to avoid repetition)
+- Natural recordings preferred (outdoor ambiences)
+- Clean samples without reverb (3D engine adds space)
 
 ## Implementation Phases
 
-### Phase 1: Core Layer System with Stereo
-1. Create new data models (SoundLayer with pan properties, EnvironmentSound)
-2. Refactor audio handler to support multiple simultaneous handles
-3. Implement basic layer playback with stereo positioning
-4. Add `setPan()` integration for each handle
-5. Update Sound model to reference base + 2-3 test layers with pan config
-6. Test multi-layer stereo playback with existing audio files
+### ✅ Phase 1: Core Layer System with Stereo (COMPLETED)
+- ✅ Data models (SoundLayer, EnvironmentSound, LayerType)
+- ✅ Multi-layer audio handler
+- ✅ Simple stereo positioning with setPan()
+- ✅ Tests passing, macOS build working
 
-### Phase 2: UI Controls
-1. Add expandable layer controls to SoundTile
-2. Create toggle switches for layer enable/disable
-3. Implement layer volume controls
-4. Add visual feedback for active layers
-5. (Optional) Add stereo field visualization
-6. Test UX flow on mobile devices with headphones
+### ✅ Phase 2: UI Controls (COMPLETED)
+- ✅ Expandable layer controls in SoundTile
+- ✅ Toggle switches for layers
+- ✅ Visual feedback for active layers
+- ✅ State management with HomeScreen
 
-### Phase 3: Randomization Engine with Spatial Audio
-1. Add Timer-based event system to audio handler
-2. Implement randomized one-shot playback with random pan position
-3. Configure interval ranges per layer type:
-   - Thunder: 30-180 seconds (near), 60-300 seconds (far)
-   - Birds: 15-60 seconds (near chirps), 120-300 seconds (far songs)
-   - Seagulls: 20-90 seconds
-4. Randomize pan (-1.0 to 1.0) on each event trigger
-5. Add randomization toggle in UI
-6. Test natural timing, overlaps, and stereo imaging
+### ✅ Phase 3: Randomization Engine (COMPLETED)
+- ✅ Timer-based random events
+- ✅ Random pan positioning
+- ✅ Configurable intervals (shortened for testing: 3-15s)
+- ✅ Console logging with emoji indicators
+
+### 🔄 Phase 3.5: Upgrade to 3D Spatial Audio (IN PROGRESS)
+1. Add 3D positioning data to SoundLayer model
+2. Initialize 3D listener in audio handler
+3. Replace `play()` with `play3d()` for all layers
+4. Implement movement interpolation system
+5. Add distance attenuation configuration
+6. Test 3D positioning with headphones
 
 ### Phase 4: Audio Asset Creation/Integration
-1. Source or create stereo layer audio files (OGG Vorbis format, stereo)
-2. Ensure all files are true stereo or properly spatialized
-3. Add rain environment layers (thunder variants, crickets, intensity variants)
-4. Add water environment layers (bird variants, frogs, wind)
-5. Update asset manifest in pubspec.yaml
-6. Test gapless looping for continuous stereo layers
-7. Verify stereo field sounds natural in headphones/speakers
+1. Convert/source MONO layer audio files (OGG Vorbis format)
+2. Add rain environment layers (thunder, crickets, wind)
+3. Add water environment layers (birds, frogs, splash)
+4. Update asset manifest in pubspec.yaml
+5. Configure 3D positions and movement paths
+6. Test gapless looping and 3D imaging
 
 ### Phase 5: Polish & Additional Environments
-1. Add ocean surf environment with stereo tides/seagulls
-2. Implement preset system (save favorite mixes with pan positions)
+1. Add ocean surf environment with 3D seagulls/waves
+2. Implement movement patterns (linear, circular, random walk)
 3. Add fade in/out when toggling layers
-4. Volume normalization across stereo layers
-5. Persistence (remember user's layer preferences and pan settings)
-6. Advanced mode: User-adjustable pan controls (optional)
+4. Volume normalization across layers
+5. Persistence (remember user's layer preferences)
+6. Additional environments (forest, campfire, desert, etc.)
 
-## Environment Sound Catalog (with Stereo Notes)
+## Environment Sound Catalog (with 3D Positioning)
 
 ### Rain
-- **Base:** Rain ambience (existing, stereo, centered)
+- **Base:** Rain ambience (0, 0, 0) - centered
 - **Continuous loops:**
-  - Crickets (stereo field, slight pan variation)
-  - Pouring rain (stereo, centered or slight offset)
-  - Light rain (stereo, centered)
-  - Wind gusts (stereo with natural movement)
-- **Random events (with pan randomization):**
-  - Near thunder (random L/R, louder, 30-180s)
-  - Far thunder (random L/R, quieter, 60-300s)
-  - Dripping water (random L/R, occasional)
+  - Crickets: Random positions in circle (radius 10, Y=0)
+  - Wind: Slowly moving (-10 to 10, Y=2, Z=-5)
+- **Random events (with 3D movement):**
+  - Thunder: Linear movement (-50,20,-30) → (50,20,-30), 3-5s
+  - Distance: 40-100 units (far, with attenuation)
 
 ### Flowing Water
-- **Base:** Flowing water (existing, stereo, centered)
+- **Base:** Flowing water (0, -1, -3) - in front, slightly below
 - **Continuous loops:**
-  - Frogs (stereo field positioning)
-  - Wind in reeds (stereo with movement)
-  - Background stream (stereo width)
-- **Random events (with pan randomization):**
-  - Near birds (random L/R/C, 15-60s)
-  - Far birds (random L/R, quieter, 120-300s)
-  - Splashing water (random L/R, occasional)
+  - Frogs: Semicircle positions (radius 8, Y=0, in front)
+  - Wind in reeds: Positioned at (0, 1, -10)
+- **Random events (with 3D movement):**
+  - Birds: Linear flight (20,8,-15) → (-20,8,-15), 2-4s with Doppler
+  - Splash: Random position in water area (±5, -1, -5 to -10)
+  - Distance: 10-30 units (medium)
 
 ### Ocean Surf (Future)
-- **Base:** Wave loop with stereo tide variation
+- **Base:** Waves (0, -2, -5) - in front, low
 - **Continuous loops:**
-  - Gentle surf (stereo width)
-  - Wind over dunes (stereo movement)
-- **Random events (with pan randomization):**
-  - Seagulls (random L/R/C, 20-90s, multiple variants)
-  - Bell buoy (random L/R or fixed position, 180-600s)
-  - Distant ship horn (random L/R, very far, 300-900s)
+  - Wind: Moving across (-15 to 15, Y=3, Z=-8)
+- **Random events (with 3D movement):**
+  - Seagulls: Circular path overhead (radius 15, center (0,12,0))
+  - Bell buoy: Fixed position (20, 0, -30) - far right
+  - Ship horn: Very distant (0, 0, -100)
+  - Distance: 8-25 units (close to medium)
 
 ### Additional Environments (Future Consideration)
-- **Forest:** Wind through trees (stereo), woodpecker (random pan), owls (L/R), deer movement (pan sweep)
-- **Campfire:** Crackling fire (stereo center), wood popping (random pan), crickets (stereo field)
-- **Desert Night:** Wind over sand (stereo movement), coyotes (random L/R distance)
-- **Mountain Stream:** Fast water (stereo center), eagles (high pan + random L/R)
-- **Cave:** Dripping water (random pan for depth), echoes (stereo reverb)
-- **Meadow:** Breeze in grass (stereo width), bees (random close pan), birds (random distant pan)
+- **Forest:** Woodpecker moving through trees, owls at specific positions
+- **Campfire:** Crackling at center (0,0,0), wood popping randomly nearby
+- **Desert Night:** Coyotes at varying distances, tumbleweeds passing by
+- **Mountain Stream:** Water rushing past, eagles circling overhead
+- **Cave:** Dripping water at random depths, echoes from walls
+- **Meadow:** Bees buzzing around, birds at different heights
 
 ## Technical Considerations
 
-1. **Stereo Audio Quality:** All recordings must be true stereo (44.1kHz, 2-channel)
-2. **Memory Management:** Load stereo layers on-demand, unload when not playing (2x mono size)
-3. **Battery Impact:** Monitor CPU usage with multiple stereo timers/handles
-4. **Audio Mixing:** SoLoud handles stereo mixing natively, ensure proper pan + volume normalization
-5. **File Size:** Keep total app size reasonable (~80-120MB with stereo environments)
-6. **Headphone Detection:** Optional - adjust stereo width for speakers vs headphones
-7. **Backwards Compatibility:** Support simple playback for users who don't want complexity
+1. **3D Audio Quality:** Mono files positioned in 3D space by SoLoud
+2. **Memory Management:** Load mono layers on-demand (50% smaller than stereo)
+3. **Battery Impact:** Monitor CPU with 3D position updates (20-30 Hz)
+4. **Audio Mixing:** SoLoud handles 3D mixing, distance attenuation automatic
+5. **File Size:** Much smaller app (~40-60MB with mono vs 80-120MB with stereo)
+6. **Update Rate:** Call `update3dAudio()` at 20-30 Hz (not every frame)
+7. **Active Sounds:** Limit to 8-10 3D sources for performance
+8. **Headphones Required:** 3D audio works best with headphones
+
+## Movement Patterns Implementation
+
+### Linear Movement (Thunder, Birds)
+```dart
+class LinearMovement {
+  final Vector3 start;
+  final Vector3 end;
+  final Duration duration;
+
+  Vector3 getPosition(double progress) {
+    return Vector3.lerp(start, end, progress);
+  }
+}
+```
+
+### Circular Movement (Seagulls)
+```dart
+class CircularMovement {
+  final Vector3 center;
+  final double radius;
+  final double height;
+  final double speed;
+
+  Vector3 getPosition(double time) {
+    final angle = time * speed;
+    return Vector3(
+      center.x + cos(angle) * radius,
+      center.y + height,
+      center.z + sin(angle) * radius,
+    );
+  }
+}
+```
+
+### Random Walk (Butterflies)
+```dart
+class RandomWalk {
+  Vector3 current;
+  final Vector3 bounds;
+  final double step;
+
+  void update(double dt) {
+    current += randomDirection() * step * dt;
+    current = current.clampToBounds(bounds);
+  }
+}
+```
 
 ## Testing Strategy
-- Test stereo imaging on headphones (critical for spatial audio)
+- ✅ Test simple pan on headphones (Phase 1-3 complete)
+- 🔄 Test 3D positioning accuracy (Phase 3.5)
+- 🔄 Test movement interpolation (thunder rolling, birds flying)
+- 🔄 Test distance attenuation (far sounds quieter)
+- 🔄 Test Doppler effects (fast-moving sounds pitch-shift)
 - Test on Android 6.0+, iOS 12.0+, macOS 10.14+
-- Verify background playback with multiple stereo layers
-- Test media controls with layered environments
-- Battery usage testing with 8-hour stereo sessions
+- Verify background playback with 3D layers
 - Memory leak testing with layer toggling
-- Audio synchronization testing (ensure no drift in stereo field)
-- Verify natural stereo width on different playback devices
+- Battery usage testing with 8-hour sessions
+- **Critical: Test with headphones for full 3D effect**
+
+## Migration from Phase 1-3 to 3D Audio
+
+**Completed (Simple Pan):**
+- Uses `setPan(handle, -1.0 to 1.0)`
+- Random pan for events
+- Static left/right positioning
+
+**Upgrade to 3D (Phase 3.5):**
+- Use `play3d(source, x, y, z)` instead of `play()`
+- Random 3D positions instead of pan
+- Dynamic movement with position interpolation
+- Distance-based attenuation automatically
+
+**Benefits:**
+- ✅ More realistic and immersive
+- ✅ Smaller file sizes (mono vs stereo)
+- ✅ Dynamic movement (rolling, flying, circling)
+- ✅ Professional-grade spatial audio
+- ✅ Natural distance perception
