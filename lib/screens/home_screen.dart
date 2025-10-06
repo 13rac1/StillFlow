@@ -16,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
   SoLoudAudioHandler? _audioHandler;
   bool _isLoading = true;
   bool _isPlaying = false;
+  Set<String> _enabledLayers = {};
   String? _errorMessage;
 
   @override
@@ -40,11 +41,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // Initialize flutter_soloud
       await _audioHandler!.initSoloud();
 
-      // Listen to playback state changes
+      // Listen to playback state changes and sync enabled layers
       _audioHandler!.playbackState.listen((state) {
         if (mounted) {
           setState(() {
             _isPlaying = state.playing;
+            _enabledLayers = _audioHandler?.enabledLayers ?? {};
           });
         }
       });
@@ -88,6 +90,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Otherwise, play the new sound
     await _audioHandler!.playSound(sound);
+  }
+
+  Future<void> _handleLayerToggle(String layerId, bool enabled) async {
+    if (_audioHandler == null) return;
+
+    await _audioHandler!.toggleLayer(layerId, enabled);
+
+    // Update UI state
+    setState(() {
+      _enabledLayers = _audioHandler!.enabledLayers;
+    });
   }
 
   @override
@@ -188,6 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         sound: sound,
                         isPlaying: isCurrentlyPlaying,
                         onTap: () => _handleSoundTap(sound),
+                        enabledLayers: _enabledLayers,
+                        onLayerToggle: _handleLayerToggle,
                       );
                     }),
                   ],
