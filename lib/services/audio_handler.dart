@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import '../models/sound.dart';
@@ -5,18 +7,27 @@ import '../models/sound.dart';
 /// Audio handler that wraps flutter_soloud with audio_service for media controls
 ///
 /// This combines:
-/// - flutter_soloud: Native gapless looping
+/// - flutter_soloud: Native gapless looping with multi-layer support
 /// - audio_service: System media controls and notifications
 class SoLoudAudioHandler extends BaseAudioHandler {
   final SoLoud _soloud = SoLoud.instance;
+  final Random _random = Random();
 
-  // Track loaded sounds and their handles
-  final Map<String, AudioSource> _loadedSounds = {};
-  SoundHandle? _currentHandle;
+  // Track loaded audio sources
+  final Map<String, AudioSource> _loadedSources = {};
+
+  // Track active handles for base sound and layers
+  SoundHandle? _baseHandle;
+  final Map<String, SoundHandle> _continuousLayerHandles = {};
+  final Map<String, Timer> _randomLayerTimers = {};
+
+  // Current environment and enabled layers
   Sound? _currentSound;
+  final Set<String> _enabledLayers = {};
 
-  bool get isPlaying => _currentHandle != null && playbackState.value.playing;
+  bool get isPlaying => _baseHandle != null && playbackState.value.playing;
   Sound? get currentSound => _currentSound;
+  Set<String> get enabledLayers => Set.unmodifiable(_enabledLayers);
 
   /// Initialize flutter_soloud
   Future<void> initSoloud() async {
@@ -26,42 +37,41 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
-  /// Load a sound from assets
-  Future<void> loadSound(Sound sound) async {
+  /// Load an audio source from asset path
+  Future<AudioSource> _loadAudioSource(String assetPath) async {
     if (!_soloud.isInitialized) {
       await initSoloud();
     }
 
-    // Skip if already loaded
-    if (_loadedSounds.containsKey(sound.id)) {
-      return;
+    // Return cached source if already loaded
+    if (_loadedSources.containsKey(assetPath)) {
+      return _loadedSources[assetPath]!;
     }
 
     try {
       final audioSource = await _soloud.loadAsset(
-        sound.assetPath,
+        assetPath,
         mode: LoadMode.disk,
       );
-      _loadedSounds[sound.id] = audioSource;
-      print('✅ Loaded sound: ${sound.name}');
+      _loadedSources[assetPath] = audioSource;
+      print('✅ Loaded audio: $assetPath');
+      return audioSource;
     } catch (e) {
-      print('❌ Error loading sound ${sound.name}: $e');
+      print('❌ Error loading audio $assetPath: $e');
       rethrow;
     }
   }
 
-  /// Play a sound with gapless looping
+  /// Play a sound (base loop only, without layers)
   Future<void> playSound(Sound sound) async {
     try {
       // Stop current playback if any
-      if (_currentHandle != null) {
+      if (_baseHandle != null) {
         await stop();
       }
 
-      // Load sound if not already loaded
-      await loadSound(sound);
-
-      final audioSource = _loadedSounds[sound.id]!;
+      // Load and play base sound
+      final audioSource = await _loadAudioSource(sound.assetPath);
 
       // Update media item for notification
       mediaItem.add(MediaItem(
@@ -80,25 +90,185 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         loopingStartAt: Duration.zero,
       );
 
-      _currentHandle = handle;
+      _baseHandle = handle;
       _currentSound = sound;
 
       // Update playback state
       _updatePlaybackState(playing: true);
 
       print('🔊 Playing: ${sound.name} (gapless loop)');
+
+      // If this is an EnvironmentSound, auto-enable default layers
+      if (sound is EnvironmentSound) {
+        for (final layer in sound.defaultEnabledLayers) {
+          await toggleLayer(layer.id, true);
+        }
+      }
     } catch (e) {
       print('❌ Error playing sound: $e');
       rethrow;
     }
   }
 
-  @override
-  Future<void> play() async {
-    if (_currentHandle == null) return;
+  /// Toggle a layer on or off
+  Future<void> toggleLayer(String layerId, bool enabled) async {
+    if (_currentSound is! EnvironmentSound) {
+      print('⚠️  Current sound is not an environment, cannot toggle layers');
+      return;
+    }
+
+    final environment = _currentSound as EnvironmentSound;
+    final layer = environment.getLayerById(layerId);
+
+    if (layer == null) {
+      print('⚠️  Layer $layerId not found');
+      return;
+    }
+
+    if (enabled) {
+      await _enableLayer(layer);
+    } else {
+      await _disableLayer(layerId);
+    }
+  }
+
+  /// Enable a layer (start playing)
+  Future<void> _enableLayer(SoundLayer layer) async {
+    if (_enabledLayers.contains(layer.id)) {
+      return; // Already enabled
+    }
 
     try {
-      _soloud.pauseSwitch(_currentHandle!);
+      final audioSource = await _loadAudioSource(layer.assetPath);
+
+      if (layer.layerType == LayerType.continuous) {
+        // Continuous loop with random volume and pan
+        final volume = _randomInRange(layer.minVolume, layer.maxVolume);
+        final pan = _randomInRange(layer.minPan, layer.maxPan);
+
+        final handle = await _soloud.play(
+          audioSource,
+          volume: volume,
+          looping: true,
+          loopingStartAt: Duration.zero,
+        );
+
+        // Set stereo pan position
+        _soloud.setPan(handle, pan);
+
+        _continuousLayerHandles[layer.id] = handle;
+        print('🎵 Enabled continuous layer: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})');
+      } else {
+        // Random event layer - set up timer
+        _scheduleRandomEvent(layer, audioSource);
+        print('⏰ Scheduled random layer: ${layer.name}');
+      }
+
+      _enabledLayers.add(layer.id);
+    } catch (e) {
+      print('❌ Error enabling layer ${layer.name}: $e');
+    }
+  }
+
+  /// Disable a layer (stop playing)
+  Future<void> _disableLayer(String layerId) async {
+    if (!_enabledLayers.contains(layerId)) {
+      return; // Already disabled
+    }
+
+    // Stop continuous layer if playing
+    if (_continuousLayerHandles.containsKey(layerId)) {
+      final handle = _continuousLayerHandles[layerId]!;
+      _soloud.stop(handle);
+      _continuousLayerHandles.remove(layerId);
+    }
+
+    // Cancel random event timer if active
+    if (_randomLayerTimers.containsKey(layerId)) {
+      _randomLayerTimers[layerId]!.cancel();
+      _randomLayerTimers.remove(layerId);
+    }
+
+    _enabledLayers.remove(layerId);
+    print('🔇 Disabled layer: $layerId');
+  }
+
+  /// Schedule a random event to play
+  void _scheduleRandomEvent(SoundLayer layer, AudioSource audioSource) {
+    if (layer.minIntervalSeconds == null || layer.maxIntervalSeconds == null) {
+      print('⚠️  Random layer ${layer.name} missing interval configuration');
+      return;
+    }
+
+    // Calculate random delay for next event
+    final delaySeconds = _random.nextInt(
+          layer.maxIntervalSeconds! - layer.minIntervalSeconds! + 1,
+        ) +
+        layer.minIntervalSeconds!;
+
+    final timer = Timer(Duration(seconds: delaySeconds), () async {
+      try {
+        // Play one-shot with random volume and pan
+        final volume = _randomInRange(layer.minVolume, layer.maxVolume);
+        final pan = _randomInRange(layer.minPan, layer.maxPan);
+
+        final handle = await _soloud.play(
+          audioSource,
+          volume: volume,
+          looping: false, // One-shot playback
+        );
+
+        // Set stereo pan position
+        _soloud.setPan(handle, pan);
+
+        print('💥 Random event: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})');
+
+        // Schedule next event
+        if (_enabledLayers.contains(layer.id)) {
+          _scheduleRandomEvent(layer, audioSource);
+        }
+      } catch (e) {
+        print('❌ Error playing random event ${layer.name}: $e');
+      }
+    });
+
+    _randomLayerTimers[layer.id] = timer;
+  }
+
+  /// Get a random value within a range
+  double _randomInRange(double min, double max) {
+    return min + _random.nextDouble() * (max - min);
+  }
+
+  /// Set volume for a specific layer
+  void setLayerVolume(String layerId, double volume) {
+    if (_continuousLayerHandles.containsKey(layerId)) {
+      final handle = _continuousLayerHandles[layerId]!;
+      _soloud.setVolume(handle, volume);
+    }
+  }
+
+  /// Set pan for a specific layer
+  void setLayerPan(String layerId, double pan) {
+    if (_continuousLayerHandles.containsKey(layerId)) {
+      final handle = _continuousLayerHandles[layerId]!;
+      _soloud.setPan(handle, pan);
+    }
+  }
+
+  @override
+  Future<void> play() async {
+    if (_baseHandle == null) return;
+
+    try {
+      // Resume base sound
+      _soloud.pauseSwitch(_baseHandle!);
+
+      // Resume all continuous layers
+      for (final handle in _continuousLayerHandles.values) {
+        _soloud.pauseSwitch(handle);
+      }
+
       _updatePlaybackState(playing: true);
     } catch (e) {
       print('❌ Error resuming: $e');
@@ -107,10 +277,17 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> pause() async {
-    if (_currentHandle == null) return;
+    if (_baseHandle == null) return;
 
     try {
-      _soloud.pauseSwitch(_currentHandle!);
+      // Pause base sound
+      _soloud.pauseSwitch(_baseHandle!);
+
+      // Pause all continuous layers
+      for (final handle in _continuousLayerHandles.values) {
+        _soloud.pauseSwitch(handle);
+      }
+
       _updatePlaybackState(playing: false);
     } catch (e) {
       print('❌ Error pausing: $e');
@@ -119,11 +296,26 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> stop() async {
-    if (_currentHandle == null) return;
+    if (_baseHandle == null) return;
 
     try {
-      _soloud.stop(_currentHandle!);
-      _currentHandle = null;
+      // Stop base sound
+      _soloud.stop(_baseHandle!);
+      _baseHandle = null;
+
+      // Stop all continuous layers
+      for (final handle in _continuousLayerHandles.values) {
+        _soloud.stop(handle);
+      }
+      _continuousLayerHandles.clear();
+
+      // Cancel all random event timers
+      for (final timer in _randomLayerTimers.values) {
+        timer.cancel();
+      }
+      _randomLayerTimers.clear();
+
+      _enabledLayers.clear();
       _currentSound = null;
 
       // Clear media item
@@ -151,23 +343,23 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     ));
   }
 
-  /// Set volume (0.0 to 1.0)
+  /// Set volume for base sound (0.0 to 1.0)
   void setVolume(double volume) {
-    if (_currentHandle == null) return;
+    if (_baseHandle == null) return;
 
     try {
-      _soloud.setVolume(_currentHandle!, volume);
+      _soloud.setVolume(_baseHandle!, volume);
     } catch (e) {
       print('❌ Error setting volume: $e');
     }
   }
 
-  /// Get current volume
+  /// Get current volume of base sound
   double getVolume() {
-    if (_currentHandle == null) return 1.0;
+    if (_baseHandle == null) return 1.0;
 
     try {
-      return _soloud.getVolume(_currentHandle!);
+      return _soloud.getVolume(_baseHandle!);
     } catch (e) {
       print('❌ Error getting volume: $e');
       return 1.0;
@@ -177,15 +369,15 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   /// Dispose of all resources
   Future<void> dispose() async {
     try {
-      if (_currentHandle != null) {
+      if (_baseHandle != null) {
         await stop();
       }
 
-      // Dispose all loaded sounds
-      for (final audioSource in _loadedSounds.values) {
+      // Dispose all loaded sources
+      for (final audioSource in _loadedSources.values) {
         await _soloud.disposeSource(audioSource);
       }
-      _loadedSounds.clear();
+      _loadedSources.clear();
 
       print('✅ Audio handler disposed');
     } catch (e) {
