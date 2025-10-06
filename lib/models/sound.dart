@@ -132,8 +132,8 @@ class SoundLibrary {
         layerType: LayerType.random,
         minVolume: 0.7,
         maxVolume: 1.0,
-        minIntervalSeconds: 30,
-        maxIntervalSeconds: 180,
+        minIntervalSeconds: 5,  // Shortened for testing
+        maxIntervalSeconds: 15,  // Shortened for testing
         enabledByDefault: false,
       ),
       SoundLayer(
@@ -165,8 +165,8 @@ class SoundLibrary {
         layerType: LayerType.random,
         minVolume: 0.6,
         maxVolume: 0.9,
-        minIntervalSeconds: 15,
-        maxIntervalSeconds: 60,
+        minIntervalSeconds: 3,  // Shortened for testing
+        maxIntervalSeconds: 10,  // Shortened for testing
         enabledByDefault: false,
       ),
       SoundLayer(
