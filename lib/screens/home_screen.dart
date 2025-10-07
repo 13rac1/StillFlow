@@ -34,8 +34,11 @@ class _HomeScreenState extends State<HomeScreen> {
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'com.stillflow.audio',
           androidNotificationChannelName: 'Still Flow Audio',
-          androidNotificationOngoing: true,
           androidShowNotificationBadge: false,
+          // Keep foreground service active even when paused to prevent
+          // Android Doze mode from stopping media controls after hours.
+          // Note: androidNotificationOngoing must be false when this is false.
+          androidStopForegroundOnPause: false,
         ),
       );
 

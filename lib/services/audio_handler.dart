@@ -18,6 +18,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   double _lowPassFrequency = 2000.0; // Hz (default cutoff)
   double _lowPassResonance = 1.0; // Sharpness of cutoff
 
+  // Position tracking for long-running playback
+  DateTime? _playbackStartTime;
+  Timer? _positionUpdateTimer;
+  static const Duration _positionUpdateInterval = Duration(seconds: 30);
+
   // Track loaded audio sources
   final Map<String, AudioSource> _loadedSources = {};
 
@@ -102,6 +107,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
       _baseHandle = handle;
       _currentSound = sound;
+
+      // Start position tracking
+      _startPositionTracking();
 
       // Update playback state
       _updatePlaybackState(playing: true);
@@ -279,6 +287,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         _soloud.pauseSwitch(handle);
       }
 
+      // Restart position tracking from current position
+      _startPositionTracking();
+
       _updatePlaybackState(playing: true);
     } catch (e) {
       print('❌ Error resuming: $e');
@@ -298,6 +309,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         _soloud.pauseSwitch(handle);
       }
 
+      // Stop position tracking while paused
+      _stopPositionTracking();
+
       _updatePlaybackState(playing: false);
     } catch (e) {
       print('❌ Error pausing: $e');
@@ -309,6 +323,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     if (_baseHandle == null) return;
 
     try {
+      // Stop position tracking
+      _stopPositionTracking();
+
       // Stop base sound
       _soloud.stop(_baseHandle!);
       _baseHandle = null;
@@ -338,8 +355,34 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
+  /// Start tracking playback position for long-running audio
+  void _startPositionTracking() {
+    _playbackStartTime = DateTime.now();
+    _positionUpdateTimer?.cancel();
+
+    // Update position every 30 seconds to keep MediaSession alive
+    _positionUpdateTimer = Timer.periodic(_positionUpdateInterval, (timer) {
+      if (_baseHandle != null && _playbackStartTime != null) {
+        final elapsed = DateTime.now().difference(_playbackStartTime!);
+        _updatePlaybackState(playing: true, position: elapsed);
+      }
+    });
+  }
+
+  /// Stop tracking playback position
+  void _stopPositionTracking() {
+    _positionUpdateTimer?.cancel();
+    _positionUpdateTimer = null;
+    _playbackStartTime = null;
+  }
+
   /// Update playback state for media controls
-  void _updatePlaybackState({required bool playing}) {
+  void _updatePlaybackState({required bool playing, Duration? position}) {
+    final currentPosition = position ??
+        (_playbackStartTime != null
+            ? DateTime.now().difference(_playbackStartTime!)
+            : Duration.zero);
+
     playbackState.add(playbackState.value.copyWith(
       controls: [
         if (playing) MediaControl.pause else MediaControl.play,
@@ -348,7 +391,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       androidCompactActionIndices: const [0],
       processingState: AudioProcessingState.ready,
       playing: playing,
-      updatePosition: Duration.zero,
+      updatePosition: currentPosition,
       speed: 1.0,
     ));
   }
@@ -420,6 +463,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   /// Dispose of all resources
   Future<void> dispose() async {
     try {
+      // Stop position tracking timer
+      _stopPositionTracking();
+
       if (_baseHandle != null) {
         await stop();
       }
