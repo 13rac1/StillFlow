@@ -3,6 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import '../models/sound.dart';
 import '../services/audio_handler.dart';
 import '../widgets/sound_tile.dart';
+import '../widgets/equalizer_controls.dart';
 
 /// Main screen displaying the sound library
 class HomeScreen extends StatefulWidget {
@@ -103,6 +104,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _showEqualizerControls() {
+    if (_audioHandler == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EqualizerControls(audioHandler: _audioHandler!),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,6 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
             letterSpacing: 2,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Equalizer',
+            onPressed: _isLoading ? null : _showEqualizerControls,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(

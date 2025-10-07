@@ -13,6 +13,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   final SoLoud _soloud = SoLoud.instance;
   final Random _random = Random();
 
+  // Low-pass filter state
+  bool _isLowPassEnabled = false;
+  double _lowPassFrequency = 2000.0; // Hz (default cutoff)
+  double _lowPassResonance = 1.0; // Sharpness of cutoff
+
   // Track loaded audio sources
   final Map<String, AudioSource> _loadedSources = {};
 
@@ -28,6 +33,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   bool get isPlaying => _baseHandle != null && playbackState.value.playing;
   Sound? get currentSound => _currentSound;
   Set<String> get enabledLayers => Set.unmodifiable(_enabledLayers);
+
+  // Low-pass filter getters
+  bool get isLowPassEnabled => _isLowPassEnabled;
+  double get lowPassFrequency => _lowPassFrequency;
+  double get lowPassResonance => _lowPassResonance;
 
   /// Initialize flutter_soloud
   Future<void> initSoloud() async {
@@ -363,6 +373,47 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     } catch (e) {
       print('❌ Error getting volume: $e');
       return 1.0;
+    }
+  }
+
+  /// Enable/disable low-pass filter globally
+  void setLowPassEnabled(bool enabled) {
+    _isLowPassEnabled = enabled;
+
+    if (enabled) {
+      // Activate biquad filter in LOWPASS mode
+      _soloud.filters.biquadResonantFilter.activate();
+
+      // Set filter parameters
+      _soloud.filters.biquadResonantFilter.type.value = 0.0; // LOWPASS = 0
+      _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
+      _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
+
+      print('🎛️  Low-pass filter enabled (${_lowPassFrequency.toInt()} Hz, resonance: ${_lowPassResonance.toStringAsFixed(1)})');
+    } else {
+      // Deactivate filter
+      _soloud.filters.biquadResonantFilter.deactivate();
+      print('🎛️  Low-pass filter disabled');
+    }
+  }
+
+  /// Set low-pass filter frequency (10-16000 Hz)
+  void setLowPassFrequency(double frequency) {
+    _lowPassFrequency = frequency.clamp(10.0, 16000.0);
+
+    if (_isLowPassEnabled) {
+      _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
+      print('🎛️  Low-pass frequency: ${_lowPassFrequency.toInt()} Hz');
+    }
+  }
+
+  /// Set low-pass filter resonance (0.1-20)
+  void setLowPassResonance(double resonance) {
+    _lowPassResonance = resonance.clamp(0.1, 20.0);
+
+    if (_isLowPassEnabled) {
+      _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
+      print('🎛️  Low-pass resonance: ${_lowPassResonance.toStringAsFixed(1)}');
     }
   }
 
