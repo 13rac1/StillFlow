@@ -8,20 +8,21 @@ Transform the current single-sound playback into a layered audio system where ea
 
 ## 🎯 3D Spatial Audio Approach
 
-### Why 3D Audio Instead of Simple Stereo Pan?
+### Why Hybrid Stereo + 3D Audio?
 
 **Previous approach (completed in Phase 1-3):**
 - Simple pan positioning (-1.0 to 1.0)
 - Static left/right balance
-- Stereo audio files
+- All stereo audio files
 
-**NEW approach (Phase 3.5+):**
-- ✅ **3D positional audio** using SoLoud's `play3d()`
+**NEW hybrid approach (Phase 3.5+):**
+- ✅ **Base loops: STEREO** - Rich, full sound at center (constant position)
+- ✅ **Layers: MONO** - 3D positioned with `play3d()` for movement
 - ✅ **Dynamic movement** (thunder rolling, birds flying)
 - ✅ **Distance attenuation** (near/far sounds naturally quieter)
 - ✅ **Doppler effects** for moving sounds
-- ✅ **Mono audio files** (half the size!)
 - ✅ **Immersive soundscape** (360° audio environment)
+- ✅ **Best of both worlds** - stereo richness + 3D positioning
 
 ### 3D Coordinate System
 ```
@@ -80,19 +81,20 @@ _soloud.update3dAudio();
 
 **Sound Positioning Examples:**
 
-**Base Loops (Centered):**
+**Base Loops (STEREO - Centered, No 3D):**
 ```dart
-// Rain ambience at origin (close, centered)
-await _soloud.play3d(audioSource, 0, 0, 0, volume: 1.0, looping: true);
+// Rain ambience - stereo file, normal play() at center
+await _soloud.play(audioSource, volume: 1.0, looping: true);
+// Stereo provides rich, full ambience
 ```
 
-**Continuous Layers (Positioned):**
+**Continuous Layers (MONO - 3D Positioned):**
 ```dart
-// Crickets - random positions around listener
+// Crickets - mono file, random 3D positions around listener
 await _soloud.play3d(audioSource, x, 0, z, volume: 0.5, looping: true);
 // x, z in range -10 to 10 (surrounding circle)
 
-// Wind - slowly moving across space
+// Wind - mono file, slowly moving across space
 await _soloud.play3d(audioSource, x, 2, -5, volume: 0.4, looping: true);
 // Update position periodically for movement
 ```
@@ -145,45 +147,48 @@ _soloud.set3dSourceMinMaxDistance(handle, 0.5, 15.0);
 assets/audio/
 ├── rain/
 │   ├── base/
-│   │   └── rain-ambience-mono.ogg (mono, for 3D positioning)
+│   │   └── rain-ambience-stereo.ogg (STEREO - rich, full sound)
 │   ├── layers/
-│   │   ├── thunder-1-mono.ogg
-│   │   ├── thunder-2-mono.ogg
-│   │   ├── thunder-3-mono.ogg
-│   │   ├── crickets-loop-mono.ogg
-│   │   └── wind-gusts-mono.ogg
+│   │   ├── thunder-1-mono.ogg (MONO - 3D positioned)
+│   │   ├── thunder-2-mono.ogg (MONO - 3D positioned)
+│   │   ├── thunder-3-mono.ogg (MONO - 3D positioned)
+│   │   ├── crickets-loop-mono.ogg (MONO - 3D positioned)
+│   │   └── wind-gusts-mono.ogg (MONO - 3D positioned)
 ├── water/
 │   ├── base/
-│   │   └── flowing-water-mono.ogg
+│   │   └── flowing-water-stereo.ogg (STEREO - rich, full sound)
 │   ├── layers/
-│   │   ├── bird-chirp-1-mono.ogg
-│   │   ├── bird-chirp-2-mono.ogg
-│   │   ├── bird-chirp-3-mono.ogg
-│   │   ├── frogs-mono.ogg
-│   │   └── splash-mono.ogg
+│   │   ├── bird-chirp-1-mono.ogg (MONO - 3D positioned)
+│   │   ├── bird-chirp-2-mono.ogg (MONO - 3D positioned)
+│   │   ├── bird-chirp-3-mono.ogg (MONO - 3D positioned)
+│   │   ├── frogs-mono.ogg (MONO - 3D positioned)
+│   │   └── splash-mono.ogg (MONO - 3D positioned)
 ├── ocean/ (future)
 │   ├── base/
-│   │   └── ocean-waves-mono.ogg
+│   │   └── ocean-waves-stereo.ogg (STEREO - rich, full sound)
 │   ├── layers/
-│   │   ├── seagull-1-mono.ogg
-│   │   ├── seagull-2-mono.ogg
-│   │   ├── bell-buoy-mono.ogg
-│   │   └── ship-horn-mono.ogg
+│   │   ├── seagull-1-mono.ogg (MONO - 3D positioned)
+│   │   ├── seagull-2-mono.ogg (MONO - 3D positioned)
+│   │   ├── bell-buoy-mono.ogg (MONO - 3D positioned)
+│   │   └── ship-horn-mono.ogg (MONO - 3D positioned)
 ```
 
-**Audio File Requirements (UPDATED FOR 3D AUDIO):**
+**Audio File Requirements (HYBRID APPROACH):**
 - **Format:** OGG Vorbis
-- **Channels:** **MONO (1 channel)** ← Changed from stereo!
+- **Base Loops:** **STEREO (2 channels)** - Rich, centered ambience
+- **Layers:** **MONO (1 channel)** - Required for 3D positioning
 - **Sample Rate:** 44.1kHz
 - **Bit Depth:** 16-bit minimum
 - **Quality:** Variable bitrate, quality 6-8
-- **Size:** 2-4MB per file (smaller than stereo)
+- **Size:** Base 5-8MB (stereo), Layers 2-4MB (mono)
 
 ### 6. Audio Recording/Sourcing Strategy
-- **Use mono recordings** - SoLoud positions them in 3D space
+- **Base loops: STEREO** - Full, rich ambient recordings (centered)
+- **Layers: MONO** - SoLoud positions them in 3D space
 - Multiple takes per event (2-3 variants to avoid repetition)
 - Natural recordings preferred (outdoor ambiences)
-- Clean samples without reverb (3D engine adds space)
+- Clean samples without reverb for layers (3D engine adds space)
+- Base loops can have subtle natural reverb/room tone
 
 ## Implementation Phases
 
@@ -232,29 +237,29 @@ assets/audio/
 ## Environment Sound Catalog (with 3D Positioning)
 
 ### Rain
-- **Base:** Rain ambience (0, 0, 0) - centered
-- **Continuous loops:**
+- **Base:** Rain ambience - STEREO, normal play() - centered, rich
+- **Continuous loops (MONO, 3D positioned):**
   - Crickets: Random positions in circle (radius 10, Y=0)
   - Wind: Slowly moving (-10 to 10, Y=2, Z=-5)
-- **Random events (with 3D movement):**
+- **Random events (MONO, 3D movement):**
   - Thunder: Linear movement (-50,20,-30) → (50,20,-30), 3-5s
   - Distance: 40-100 units (far, with attenuation)
 
 ### Flowing Water
-- **Base:** Flowing water (0, -1, -3) - in front, slightly below
-- **Continuous loops:**
+- **Base:** Flowing water - STEREO, normal play() - centered, rich
+- **Continuous loops (MONO, 3D positioned):**
   - Frogs: Semicircle positions (radius 8, Y=0, in front)
   - Wind in reeds: Positioned at (0, 1, -10)
-- **Random events (with 3D movement):**
+- **Random events (MONO, 3D movement):**
   - Birds: Linear flight (20,8,-15) → (-20,8,-15), 2-4s with Doppler
   - Splash: Random position in water area (±5, -1, -5 to -10)
   - Distance: 10-30 units (medium)
 
 ### Ocean Surf (Future)
-- **Base:** Waves (0, -2, -5) - in front, low
-- **Continuous loops:**
+- **Base:** Waves - STEREO, normal play() - centered, rich
+- **Continuous loops (MONO, 3D positioned):**
   - Wind: Moving across (-15 to 15, Y=3, Z=-8)
-- **Random events (with 3D movement):**
+- **Random events (MONO, 3D movement):**
   - Seagulls: Circular path overhead (radius 15, center (0,12,0))
   - Bell buoy: Fixed position (20, 0, -30) - far right
   - Ship horn: Very distant (0, 0, -100)
@@ -270,14 +275,16 @@ assets/audio/
 
 ## Technical Considerations
 
-1. **3D Audio Quality:** Mono files positioned in 3D space by SoLoud
-2. **Memory Management:** Load mono layers on-demand (50% smaller than stereo)
-3. **Battery Impact:** Monitor CPU with 3D position updates (20-30 Hz)
-4. **Audio Mixing:** SoLoud handles 3D mixing, distance attenuation automatic
-5. **File Size:** Much smaller app (~40-60MB with mono vs 80-120MB with stereo)
-6. **Update Rate:** Call `update3dAudio()` at 20-30 Hz (not every frame)
-7. **Active Sounds:** Limit to 8-10 3D sources for performance
-8. **Headphones Required:** 3D audio works best with headphones
+1. **Hybrid Audio:** Stereo base loops (rich, centered) + Mono layers (3D positioned)
+2. **3D Audio Quality:** Mono layer files positioned in 3D space by SoLoud
+3. **Memory Management:** Load mono layers on-demand (50% smaller than stereo)
+4. **Battery Impact:** Monitor CPU with 3D position updates (20-30 Hz)
+5. **Audio Mixing:** SoLoud handles 3D mixing, distance attenuation automatic
+6. **File Size:** ~60-90MB (stereo bases + mono layers vs all stereo 120MB)
+7. **Update Rate:** Call `update3dAudio()` at 20-30 Hz (not every frame)
+8. **Active Sounds:** Limit to 8-10 3D sources for performance
+9. **Headphones Recommended:** 3D layer audio works best with headphones
+10. **Stereo Benefit:** Base loops get full stereo richness without 3D overhead
 
 ## Movement Patterns Implementation
 
@@ -339,22 +346,25 @@ class RandomWalk {
 - Battery usage testing with 8-hour sessions
 - **Critical: Test with headphones for full 3D effect**
 
-## Migration from Phase 1-3 to 3D Audio
+## Migration from Phase 1-3 to Hybrid 3D Audio
 
 **Completed (Simple Pan):**
-- Uses `setPan(handle, -1.0 to 1.0)`
+- Uses `setPan(handle, -1.0 to 1.0)` for all sounds
 - Random pan for events
 - Static left/right positioning
+- All stereo files
 
-**Upgrade to 3D (Phase 3.5):**
-- Use `play3d(source, x, y, z)` instead of `play()`
-- Random 3D positions instead of pan
+**Upgrade to Hybrid 3D (Phase 3.5):**
+- **Base loops:** Keep stereo, use normal `play()` - no 3D positioning needed
+- **Layers:** Convert to mono, use `play3d(source, x, y, z)`
+- Random 3D positions instead of pan for layers
 - Dynamic movement with position interpolation
 - Distance-based attenuation automatically
 
 **Benefits:**
-- ✅ More realistic and immersive
-- ✅ Smaller file sizes (mono vs stereo)
+- ✅ Best of both: Stereo richness + 3D positioning
+- ✅ Optimized file sizes (mono layers, stereo bases)
 - ✅ Dynamic movement (rolling, flying, circling)
-- ✅ Professional-grade spatial audio
+- ✅ Professional-grade spatial audio for layers
 - ✅ Natural distance perception
+- ✅ Rich, full base ambience (stereo)

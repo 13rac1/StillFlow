@@ -1,30 +1,47 @@
-# Audio Files Needed - 3D Spatial Audio
+# Audio Files Needed - Hybrid Stereo + 3D Spatial Audio
 
-This document lists all audio files needed to complete the layered environmental sound system with **3D spatial audio positioning**.
+This document lists all audio files needed to complete the layered environmental sound system with **hybrid stereo + 3D spatial audio**.
 
-## Audio File Specifications - UPDATED FOR 3D AUDIO
+## Audio File Specifications - HYBRID APPROACH
 
+### Base Loops (STEREO)
 - **Format:** OGG Vorbis (.ogg)
+- **Channels:** **STEREO (2 channels)** - Rich, full sound
 - **Sample Rate:** 44.1kHz
-- **Channels:** **MONO (1 channel)** ← Critical for 3D positioning!
 - **Bit Depth:** 16-bit minimum
 - **Quality:** Variable bitrate, quality 6-8
-- **File Size:** 2-4MB per file (much smaller than stereo)
+- **File Size:** 5-8MB per file
+- **Loop Requirements:** Seamless/gapless looping
+- **Reverb:** Natural/subtle reverb acceptable
+
+### Layer Sounds (MONO)
+- **Format:** OGG Vorbis (.ogg)
+- **Channels:** **MONO (1 channel)** - Required for 3D positioning!
+- **Sample Rate:** 44.1kHz
+- **Bit Depth:** 16-bit minimum
+- **Quality:** Variable bitrate, quality 6-8
+- **File Size:** 2-4MB per file
 - **Loop Requirements:** Seamless/gapless for continuous layers
 - **Variants:** Multiple takes for random events to reduce repetition
 - **Reverb:** NO reverb - 3D audio engine adds spatial characteristics
 
-## Why Mono Instead of Stereo?
+## Why Hybrid Stereo + Mono?
 
-**3D Spatial Audio Benefits:**
+**Base Loops (STEREO):**
+- ✅ Rich, full ambience at center
+- ✅ No 3D processing overhead
+- ✅ Professional sound quality
+- ✅ Natural stereo imaging
+
+**Layer Sounds (MONO for 3D):**
 - ✅ SoLoud positions mono sounds in 3D space (x, y, z coordinates)
-- ✅ **50% smaller file sizes** (mono vs stereo)
+- ✅ **50% smaller file sizes** vs stereo layers
 - ✅ Dynamic movement (thunder rolling, birds flying)
 - ✅ Automatic distance attenuation (far sounds quieter)
 - ✅ Doppler effects for moving sounds
 - ✅ More flexible and immersive than simple pan
 
-**The 3D Engine Handles:**
+**The 3D Engine Handles (for layers):**
 - Positioning sounds left/right/center/behind
 - Distance-based volume
 - Movement across the soundscape
@@ -32,21 +49,22 @@ This document lists all audio files needed to complete the layered environmental
 
 ## Current Status
 
-### ✅ Already Have (2 files - will need mono conversion)
-- `rain-sounds-ambience-351115.ogg` - Rain base loop (5.4MB, stereo → convert to mono)
-- `flowing-water-loop-1-183953.ogg` - Flowing water base loop (8.2MB, stereo → convert to mono)
+### ✅ Already Have (2 files - KEEP AS STEREO)
+- `rain-sounds-ambience-351115.ogg` - Rain base loop (5.4MB, **STEREO** - perfect!)
+- `flowing-water-loop-1-183953.ogg` - Flowing water base loop (8.2MB, **STEREO** - perfect!)
 
-**Action:** Convert existing stereo files to mono or re-source as mono
+**Action:** Keep these stereo files for base loops - no conversion needed!
 
 ---
 
 ## 🌧️ Rain Environment
 
-### Base Sound (1 file needed - conversion)
-- `rain/base/rain-ambience-mono.ogg`
-  - Convert existing stereo file to mono
-  - **3D Position:** (0, 0, 0) - centered at listener
+### Base Sound (ALREADY HAVE - STEREO)
+- `rain/base/rain-ambience-stereo.ogg`
+  - ✅ **Already have:** `rain-sounds-ambience-351115.ogg` (STEREO)
+  - **Playback:** Normal `play()` - centered, no 3D positioning
   - Seamless loop
+  - Rich, full stereo ambience
 
 ### Continuous Loop Layers (2 files needed)
 
@@ -88,17 +106,18 @@ This document lists all audio files needed to complete the layered environmental
   - One-shot (3-6 seconds)
   - **3D Movement:** Same movement pattern
 
-**Rain Environment Total: 6 files needed (1 converted + 5 new mono)**
+**Rain Environment Total: 5 NEW mono layer files needed (base stereo already have)**
 
 ---
 
 ## 💧 Flowing Water Environment
 
-### Base Sound (1 file needed - conversion)
-- `water/base/flowing-water-mono.ogg`
-  - Convert existing stereo file to mono
-  - **3D Position:** (0, -1, -3) - in front, slightly below listener
+### Base Sound (ALREADY HAVE - STEREO)
+- `water/base/flowing-water-stereo.ogg`
+  - ✅ **Already have:** `flowing-water-loop-1-183953.ogg` (STEREO)
+  - **Playback:** Normal `play()` - centered, no 3D positioning
   - Seamless loop
+  - Rich, full stereo ambience
 
 ### Continuous Loop Layers (1 file needed)
 
@@ -139,20 +158,20 @@ This document lists all audio files needed to complete the layered environmental
   - One-shot (1-2 seconds)
   - **3D Position:** Random positions in water area (±5, -1, -5 to -10)
 
-**Flowing Water Environment Total: 6 files needed (1 converted + 5 new mono)**
+**Flowing Water Environment Total: 5 NEW mono layer files needed (base stereo already have)**
 
 ---
 
 ## 🌊 Ocean Surf Environment (Future - Phase 5)
 
-### Base Sound (1 file needed)
+### Base Sound (1 file needed - STEREO)
 
 **Priority: Low (Phase 5)**
-- `ocean/base/ocean-waves-mono.ogg`
-  - Ocean waves/surf (MONO)
+- `ocean/base/ocean-waves-stereo.ogg`
+  - Ocean waves/surf (STEREO)
   - Natural ebb and flow
   - Seamless loop
-  - **3D Position:** (0, -2, -5) - in front, below listener
+  - **Playback:** Normal `play()` - centered, rich stereo
 
 ### Continuous Loop Layers (1 file needed)
 
@@ -191,48 +210,54 @@ This document lists all audio files needed to complete the layered environmental
   - One-shot (2-4 seconds)
   - **3D Position:** Fixed at (20, 0, -30) - far to the right
 
-**Ocean Surf Environment Total: 6 files needed**
+**Ocean Surf Environment Total: 6 files needed (1 stereo base + 5 mono layers)**
 
 ---
 
 ## Summary
 
 ### Immediate Priority (Phase 4)
-- **Rain Environment:** 6 files (1 conversion + 5 new)
-- **Flowing Water Environment:** 6 files (1 conversion + 5 new)
-- **Total for Phase 4:** 12 files
+- **Rain Environment:** 5 NEW mono layer files (base stereo ✅ have)
+- **Flowing Water Environment:** 5 NEW mono layer files (base stereo ✅ have)
+- **Total for Phase 4:** 10 NEW mono files
 
 ### Future (Phase 5)
-- **Ocean Surf Environment:** 6 files
+- **Ocean Surf Environment:** 6 files (1 stereo base + 5 mono layers)
 - **Total for Phase 5:** 6 files
 
 ### Grand Total
-- **All Environments:** 18 mono files needed
-- **Currently Have:** 2 stereo files (need conversion to mono)
-- **New Files to Source:** 16 mono files
+- **Base loops (STEREO):** 2 already have ✅ + 1 ocean (Phase 5) = 3 stereo files
+- **Layer sounds (MONO):** 10 for Phase 4 + 5 for ocean (Phase 5) = 15 mono files
+- **Total Files Needed:** 10 mono files for Phase 4, 6 files for Phase 5
+- **Currently Have:** 2 stereo base loops ✅
 
-**File Size Savings:** ~50% smaller than stereo approach (40-60MB vs 80-120MB)
+**File Size Estimate:** ~60-90MB total (stereo bases + mono layers vs all stereo 120MB)
 
 ---
 
 ## File Naming Convention
 
-All files must be MONO and follow this pattern:
+**Base loops (STEREO):**
 ```
-assets/audio/{environment}/{category}/{description}-mono.ogg
+assets/audio/{environment}/base/{description}-stereo.ogg
+```
+
+**Layer sounds (MONO):**
+```
+assets/audio/{environment}/layers/{description}-mono.ogg
+```
 
 Where:
   {environment} = rain | water | ocean
-  {category}    = base | layers
   {description} = descriptive-name-with-dashes
-  -mono suffix  = REQUIRED to indicate mono channel
-```
+  -stereo/-mono suffix = REQUIRED to indicate channel count
 
 Examples:
-- ✅ `assets/audio/rain/base/rain-ambience-mono.ogg`
-- ✅ `assets/audio/rain/layers/thunder-1-mono.ogg`
-- ✅ `assets/audio/water/layers/bird-chirp-2-mono.ogg`
-- ❌ `assets/audio/rain/layers/thunder-stereo.ogg` (must be mono!)
+- ✅ `assets/audio/rain/base/rain-ambience-stereo.ogg` (STEREO base)
+- ✅ `assets/audio/rain/layers/thunder-1-mono.ogg` (MONO layer)
+- ✅ `assets/audio/water/layers/bird-chirp-2-mono.ogg` (MONO layer)
+- ❌ `assets/audio/rain/layers/thunder-stereo.ogg` (layers must be mono!)
+- ❌ `assets/audio/rain/base/rain-mono.ogg` (bases should be stereo!)
 
 ---
 
@@ -256,21 +281,21 @@ Looking toward -Z direction
 ### Position Examples by Environment
 
 **Rain:**
-- Base loop: (0, 0, 0) - centered
-- Crickets: Random in circle (radius 10, Y=0) - ground level around listener
-- Thunder: Moves from (-50, 20, -30) to (50, 20, -30) - high in sky, rolling L→R
+- Base loop: STEREO, normal `play()` - centered, no 3D positioning
+- Crickets (MONO): Random in circle (radius 10, Y=0) - ground level around listener
+- Thunder (MONO): Moves from (-50, 20, -30) to (50, 20, -30) - high in sky, rolling L→R
 - Distance: Thunder 40-100 units, Crickets 5-15 units
 
 **Water:**
-- Base loop: (0, -1, -3) - in front, slightly below
-- Frogs: Semicircle positions (radius 8, Y=0) - around water in front
-- Birds: Linear flight (20, 8, -15) to (-20, 8, -15) - medium height, flying across
+- Base loop: STEREO, normal `play()` - centered, no 3D positioning
+- Frogs (MONO): Semicircle positions (radius 8, Y=0) - around water in front
+- Birds (MONO): Linear flight (20, 8, -15) to (-20, 8, -15) - medium height, flying across
 - Distance: Birds 10-30 units, Frogs 3-12 units
 
 **Ocean:**
-- Base loop: (0, -2, -5) - waves in front
-- Seagulls: Circular (radius 15, center (0, 12, 0)) - overhead
-- Bell buoy: Fixed at (20, 0, -30) - distant, to the right
+- Base loop: STEREO, normal `play()` - centered, no 3D positioning
+- Seagulls (MONO): Circular (radius 15, center (0, 12, 0)) - overhead
+- Bell buoy (MONO): Fixed at (20, 0, -30) - distant, to the right
 - Distance: Seagulls 8-25 units, Bell buoy 30-50 units
 
 ---
@@ -308,32 +333,37 @@ Recommended sources for royalty-free mono nature sounds:
 
 ---
 
-## Converting Stereo to Mono
+## Converting Stereo to Mono (For Layers Only)
+
+**NOTE:** Only convert stereo to mono for LAYER sounds, NOT base loops!
 
 ### Using ffmpeg:
 
 ```bash
-# Convert stereo to mono (mix both channels)
-ffmpeg -i input-stereo.wav -ac 1 output-mono.ogg
-
-# Convert with quality control
+# Convert stereo layer sound to mono (mix both channels)
 ffmpeg -i input-stereo.wav -ac 1 -c:a libvorbis -q:a 6 output-mono.ogg
 
-# Convert existing stereo OGG to mono
-ffmpeg -i rain-sounds-ambience-351115.ogg -ac 1 -c:a libvorbis -q:a 6 rain-ambience-mono.ogg
+# Example: Convert a bird chirp
+ffmpeg -i bird-chirp-stereo.wav -ac 1 -c:a libvorbis -q:a 6 bird-chirp-1-mono.ogg
 
-# Batch convert all stereo files in directory
-for file in *.ogg; do
-  ffmpeg -i "$file" -ac 1 -c:a libvorbis -q:a 6 "${file%.ogg}-mono.ogg"
+# Batch convert layer sounds (NOT bases!)
+for file in layers/*.wav; do
+  ffmpeg -i "$file" -ac 1 -c:a libvorbis -q:a 6 "${file%.wav}-mono.ogg"
 done
 ```
 
 ### Using Audacity:
-1. Open stereo file
+1. Open stereo layer sound file
 2. Tracks → Mix → Mix Stereo Down to Mono
 3. File → Export → Export as OGG Vorbis
 4. Set quality to 6
 5. Save with `-mono.ogg` suffix
+
+### For Base Loops (Keep Stereo):
+```bash
+# Just convert format, preserve stereo
+ffmpeg -i input-base.wav -c:a libvorbis -q:a 6 base-stereo.ogg
+```
 
 ---
 
@@ -342,21 +372,23 @@ done
 When you have audio files ready:
 
 1. ✅ Files are in OGG Vorbis format
-2. ✅ **Files are MONO (1 channel) - Critical!**
-3. ✅ Files are at 44.1kHz sample rate
-4. ✅ Continuous loops are seamless
-5. ✅ File names include `-mono` suffix
-6. ✅ Files are placed in correct directory structure
-7. ✅ Update `pubspec.yaml` asset manifest
-8. ✅ Update `lib/models/sound.dart` with:
-   - Correct asset paths (mono files)
-   - 3D position data
-   - Movement patterns
-   - Distance ranges
-9. ✅ Test 3D positioning with headphones
-10. ✅ Test movement interpolation
-11. ✅ Verify distance attenuation works
-12. ✅ Test Doppler effects on fast-moving sounds
+2. ✅ **Base loops are STEREO (2 channels)**
+3. ✅ **Layer sounds are MONO (1 channel) - Critical for 3D!**
+4. ✅ Files are at 44.1kHz sample rate
+5. ✅ Continuous loops are seamless
+6. ✅ File names include `-stereo` (bases) or `-mono` (layers) suffix
+7. ✅ Files are placed in correct directory structure
+8. ✅ Update `pubspec.yaml` asset manifest
+9. ✅ Update `lib/models/sound.dart` with:
+   - Correct asset paths (stereo bases, mono layers)
+   - 3D position data (for layers only)
+   - Movement patterns (for layers only)
+   - Distance ranges (for layers only)
+10. ✅ Test base loops play correctly (stereo, centered)
+11. ✅ Test layer 3D positioning with headphones
+12. ✅ Test movement interpolation (layers only)
+13. ✅ Verify distance attenuation works (layers only)
+14. ✅ Test Doppler effects on fast-moving sounds (layers only)
 
 ---
 
@@ -432,11 +464,14 @@ SoundLayer(
 
 ## Notes
 
-- **Critical:** All audio files MUST be MONO for 3D spatial audio to work
+- **Hybrid Approach:** Base loops STEREO (rich, centered), Layers MONO (3D positioned)
+- **Critical:** Layer files MUST be MONO for 3D spatial audio to work
+- **Base Loops:** Already have 2 stereo files ✅ - perfect for centered ambience
 - **Placeholder Status:** Currently using stereo files with simple pan (Phase 1-3)
-- **Next Step:** Phase 3.5 will upgrade to 3D audio with `play3d()`
-- **Testing:** Requires headphones to properly hear 3D positioning
-- **Performance:** Mono files = 50% smaller app size vs stereo
-- **Movement:** Thunder rolls, birds fly, seagulls circle - all dynamic!
-- **Attenuation:** Far sounds automatically quieter, close sounds louder
-- **Doppler:** Fast-moving sounds have realistic pitch shifts
+- **Next Step:** Phase 3.5 will upgrade layers to 3D audio with `play3d()`
+- **Testing:** Headphones recommended for 3D layer positioning
+- **Performance:** Mono layers = smaller than all-stereo approach
+- **Movement:** Thunder rolls, birds fly, seagulls circle - all dynamic (layers only)!
+- **Attenuation:** Far layer sounds automatically quieter, close sounds louder
+- **Doppler:** Fast-moving layer sounds have realistic pitch shifts
+- **Best of Both:** Stereo richness for bases + 3D immersion for layers
