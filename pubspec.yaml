@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Audio playback with gapless looping support
-  flutter_soloud: ^3.3.7
+  flutter_soloud: ^4.0.2
 
   # Background audio and media controls
   audio_service: ^0.18.15

@@ -102,7 +102,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       );
 
       // Play with gapless looping
-      final handle = await _soloud.play(
+      final handle = _soloud.play(
         audioSource,
         volume: 1.0,
         looping: true,
@@ -166,7 +166,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
         final pan = _randomInRange(layer.minPan, layer.maxPan);
 
-        final handle = await _soloud.play(
+        final handle = _soloud.play(
           audioSource,
           volume: volume,
           looping: true,
@@ -241,7 +241,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
         final pan = _randomInRange(layer.minPan, layer.maxPan);
 
-        final handle = await _soloud.play(
+        final handle = _soloud.play(
           audioSource,
           volume: volume,
           looping: false,

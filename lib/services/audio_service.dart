@@ -110,7 +110,7 @@ class AudioService {
       final audioSource = _loadedSounds[sound.id]!;
 
       // Play with gapless looping
-      final handle = await _soloud.play(
+      final handle = _soloud.play(
         audioSource,
         volume: 1.0,
         looping: true,
