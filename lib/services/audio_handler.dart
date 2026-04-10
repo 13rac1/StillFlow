@@ -30,6 +30,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   SoundHandle? _baseHandle;
   final Map<String, SoundHandle> _continuousLayerHandles = {};
   final Map<String, Timer> _randomLayerTimers = {};
+  final Map<String, List<AudioSource>> _randomLayerSources = {};
 
   // Current environment and enabled layers
   Sound? _currentSound;
@@ -89,13 +90,15 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       final audioSource = await _loadAudioSource(sound.assetPath);
 
       // Update media item for notification
-      mediaItem.add(MediaItem(
-        id: sound.id,
-        title: sound.name,
-        artist: 'Still Flow',
-        album: 'Ambient Sounds',
-        duration: null, // Looping indefinitely
-      ));
+      mediaItem.add(
+        MediaItem(
+          id: sound.id,
+          title: sound.name,
+          artist: 'Still Flow',
+          album: 'Ambient Sounds',
+          duration: null, // Looping indefinitely
+        ),
+      );
 
       // Play with gapless looping
       final handle = await _soloud.play(
@@ -157,10 +160,8 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
 
     try {
-      final audioSource = await _loadAudioSource(layer.assetPath);
-
       if (layer.layerType == LayerType.continuous) {
-        // Continuous loop with random volume and pan
+        final audioSource = await _loadAudioSource(layer.assetPaths.first);
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
         final pan = _randomInRange(layer.minPan, layer.maxPan);
 
@@ -171,15 +172,22 @@ class SoLoudAudioHandler extends BaseAudioHandler {
           loopingStartAt: Duration.zero,
         );
 
-        // Set stereo pan position
         _soloud.setPan(handle, pan);
-
         _continuousLayerHandles[layer.id] = handle;
-        print('🎵 Enabled continuous layer: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})');
+        print(
+          '🎵 Enabled continuous layer: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})',
+        );
       } else {
-        // Random event layer - set up timer
-        _scheduleRandomEvent(layer, audioSource);
-        print('⏰ Scheduled random layer: ${layer.name}');
+        // Load all variant sources for random selection
+        final sources = <AudioSource>[];
+        for (final path in layer.assetPaths) {
+          sources.add(await _loadAudioSource(path));
+        }
+        _randomLayerSources[layer.id] = sources;
+        _scheduleRandomEvent(layer);
+        print(
+          '⏰ Scheduled random layer: ${layer.name} (${sources.length} variants)',
+        );
       }
 
       _enabledLayers.add(layer.id);
@@ -194,56 +202,57 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       return; // Already disabled
     }
 
-    // Stop continuous layer if playing
     if (_continuousLayerHandles.containsKey(layerId)) {
-      final handle = _continuousLayerHandles[layerId]!;
-      _soloud.stop(handle);
+      _soloud.stop(_continuousLayerHandles[layerId]!);
       _continuousLayerHandles.remove(layerId);
     }
 
-    // Cancel random event timer if active
     if (_randomLayerTimers.containsKey(layerId)) {
       _randomLayerTimers[layerId]!.cancel();
       _randomLayerTimers.remove(layerId);
     }
 
+    _randomLayerSources.remove(layerId);
     _enabledLayers.remove(layerId);
     print('🔇 Disabled layer: $layerId');
   }
 
   /// Schedule a random event to play
-  void _scheduleRandomEvent(SoundLayer layer, AudioSource audioSource) {
+  void _scheduleRandomEvent(SoundLayer layer) {
     if (layer.minIntervalSeconds == null || layer.maxIntervalSeconds == null) {
       print('⚠️  Random layer ${layer.name} missing interval configuration');
       return;
     }
 
-    // Calculate random delay for next event
-    final delaySeconds = _random.nextInt(
+    final delaySeconds =
+        _random.nextInt(
           layer.maxIntervalSeconds! - layer.minIntervalSeconds! + 1,
         ) +
         layer.minIntervalSeconds!;
 
     final timer = Timer(Duration(seconds: delaySeconds), () async {
       try {
-        // Play one-shot with random volume and pan
+        final sources = _randomLayerSources[layer.id];
+        if (sources == null || sources.isEmpty) return;
+
+        // Pick a random variant
+        final audioSource = sources[_random.nextInt(sources.length)];
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
         final pan = _randomInRange(layer.minPan, layer.maxPan);
 
         final handle = await _soloud.play(
           audioSource,
           volume: volume,
-          looping: false, // One-shot playback
+          looping: false,
         );
 
-        // Set stereo pan position
         _soloud.setPan(handle, pan);
+        print(
+          '💥 Random event: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})',
+        );
 
-        print('💥 Random event: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})');
-
-        // Schedule next event
         if (_enabledLayers.contains(layer.id)) {
-          _scheduleRandomEvent(layer, audioSource);
+          _scheduleRandomEvent(layer);
         }
       } catch (e) {
         print('❌ Error playing random event ${layer.name}: $e');
@@ -378,22 +387,25 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   /// Update playback state for media controls
   void _updatePlaybackState({required bool playing, Duration? position}) {
-    final currentPosition = position ??
+    final currentPosition =
+        position ??
         (_playbackStartTime != null
             ? DateTime.now().difference(_playbackStartTime!)
             : Duration.zero);
 
-    playbackState.add(playbackState.value.copyWith(
-      controls: [
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
-      ],
-      androidCompactActionIndices: const [0],
-      processingState: AudioProcessingState.ready,
-      playing: playing,
-      updatePosition: currentPosition,
-      speed: 1.0,
-    ));
+    playbackState.add(
+      playbackState.value.copyWith(
+        controls: [
+          if (playing) MediaControl.pause else MediaControl.play,
+          MediaControl.stop,
+        ],
+        androidCompactActionIndices: const [0],
+        processingState: AudioProcessingState.ready,
+        playing: playing,
+        updatePosition: currentPosition,
+        speed: 1.0,
+      ),
+    );
   }
 
   /// Set volume for base sound (0.0 to 1.0)
@@ -432,7 +444,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
       _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
 
-      print('🎛️  Low-pass filter enabled (${_lowPassFrequency.toInt()} Hz, resonance: ${_lowPassResonance.toStringAsFixed(1)})');
+      print(
+        '🎛️  Low-pass filter enabled (${_lowPassFrequency.toInt()} Hz, resonance: ${_lowPassResonance.toStringAsFixed(1)})',
+      );
     } else {
       // Deactivate filter
       _soloud.filters.biquadResonantFilter.deactivate();

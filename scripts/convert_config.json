@@ -1,0 +1,157 @@
+{
+  "source_dir": "assets/original",
+  "output_dir": "assets/audio",
+  "defaults": {
+    "mono": true,
+    "sample_rate": 44100,
+    "quality": 6
+  },
+  "files": [
+    {
+      "input": "446753__bluedelta__heavy-thunder-strike-no-rain-quadro.wav",
+      "outputs": [
+        {
+          "path": "rain/layers/thunder-strike-heavy.ogg",
+          "start": 0, "duration": 16,
+          "fade_out": 2
+        },
+        {
+          "path": "rain/layers/thunder-rumble-long.ogg",
+          "start": 0, "duration": 33,
+          "fade_out": 3
+        }
+      ]
+    },
+    {
+      "input": "367702__bluedelta__thunder-long-rumbling-no-rain-4-channel-44khz.wav",
+      "outputs": [
+        {
+          "path": "rain/layers/thunder-rolling-full.ogg",
+          "start": 0, "duration": 28,
+          "fade_out": 3,
+          "volume_boost": 3
+        },
+        {
+          "path": "rain/layers/thunder-rolling-short.ogg",
+          "start": 0, "duration": 13,
+          "fade_out": 2,
+          "volume_boost": 3
+        },
+        {
+          "path": "rain/layers/thunder-distant-rumble.ogg",
+          "start": 14, "duration": 29,
+          "fade_in": 1, "fade_out": 3,
+          "volume_boost": 17
+        }
+      ]
+    },
+    {
+      "input": "581124__fission9__distant-thunder-3.wav",
+      "outputs": [
+        {
+          "path": "rain/layers/thunder-distant-boom.ogg",
+          "volume_boost": 12.5
+        }
+      ]
+    },
+    {
+      "input": "522298__defelozedd94__crickets-at-night-clean-sound.wav",
+      "outputs": [
+        {
+          "path": "rain/layers/crickets-loop.ogg",
+          "volume_boost": 18
+        }
+      ]
+    },
+    {
+      "input": "215414__felixblume__wind-blowing-in-the-countryside-during-spring-tall-grass-prairie-oklahoma-usa.wav",
+      "outputs": [
+        {
+          "path": "rain/layers/wind-countryside.ogg"
+        }
+      ]
+    },
+    {
+      "input": "181132__keweldog__bird-chirps.wav",
+      "outputs": [
+        {
+          "path": "water/layers/bird-chirps-1.ogg",
+          "start": 2.6, "duration": 2.3,
+          "fade_in": 0.05, "fade_out": 0.1,
+          "volume_boost": 27
+        },
+        {
+          "path": "water/layers/bird-chirps-2.ogg",
+          "start": 7.1, "duration": 2.6,
+          "fade_in": 0.05, "fade_out": 0.1,
+          "volume_boost": 28
+        },
+        {
+          "path": "water/layers/bird-chirps-3.ogg",
+          "start": 17.9, "duration": 2.8,
+          "fade_in": 0.05, "fade_out": 0.1,
+          "volume_boost": 30
+        },
+        {
+          "path": "water/layers/bird-chirps-4.ogg",
+          "start": 26.6, "duration": 5.5,
+          "fade_in": 0.05, "fade_out": 0.2,
+          "volume_boost": 27
+        }
+      ]
+    },
+    {
+      "input": "519108__lilmati__bird-07.wav",
+      "outputs": [
+        {
+          "path": "water/layers/bird-song-1.ogg",
+          "volume_boost": 20
+        }
+      ]
+    },
+    {
+      "input": "416529__inspectorj__bird-whistling-single-robin-a.wav",
+      "outputs": [
+        {
+          "path": "water/layers/bird-robin-1.ogg",
+          "volume_boost": 5.5
+        }
+      ]
+    },
+    {
+      "input": "532235__shaunhillyard__frog-croaking-uk-common-frog.wav",
+      "outputs": [
+        {
+          "path": "water/layers/frog-croaking.ogg",
+          "volume_boost": 25.5
+        }
+      ]
+    },
+    {
+      "input": "475448__o_ciz__windleaves.wav",
+      "outputs": [
+        {
+          "path": "water/layers/breeze-leaves.ogg",
+          "volume_boost": 23
+        }
+      ]
+    },
+    {
+      "input": "181252__mario1298__a-gentle-breeze-wind-3.wav",
+      "outputs": [
+        {
+          "path": "water/layers/breeze-gentle.ogg"
+        }
+      ]
+    },
+    {
+      "input": "751473__borgory__soft-wind-in-the-trees-leaves-rustle.wav",
+      "outputs": [
+        {
+          "path": "water/layers/breeze-soft-trees.ogg",
+          "volume_boost": 5.5
+        }
+      ]
+    }
+  ]
+}
