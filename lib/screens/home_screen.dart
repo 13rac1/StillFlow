@@ -3,6 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import '../models/sound.dart';
 import '../services/audio_handler.dart';
 import '../widgets/sound_tile.dart';
+import '../widgets/about_sheet.dart';
 import '../widgets/equalizer_controls.dart';
 
 /// Main screen displaying the sound library
@@ -127,6 +128,16 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(fontWeight: FontWeight.w300, letterSpacing: 2),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'About',
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => const AboutSheet(),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Equalizer',
