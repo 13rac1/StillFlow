@@ -16,11 +16,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SoundTile(
-              sound: testSound,
-              isPlaying: false,
-              onTap: () {},
-            ),
+            body: SoundTile(sound: testSound, isPlaying: false, onTap: () {}),
           ),
         ),
       );
@@ -33,11 +29,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SoundTile(
-              sound: testSound,
-              isPlaying: false,
-              onTap: () {},
-            ),
+            body: SoundTile(sound: testSound, isPlaying: false, onTap: () {}),
           ),
         ),
       );
@@ -50,11 +42,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SoundTile(
-              sound: testSound,
-              isPlaying: true,
-              onTap: () {},
-            ),
+            body: SoundTile(sound: testSound, isPlaying: true, onTap: () {}),
           ),
         ),
       );
@@ -88,11 +76,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SoundTile(
-              sound: testSound,
-              isPlaying: true,
-              onTap: () {},
-            ),
+            body: SoundTile(sound: testSound, isPlaying: true, onTap: () {}),
           ),
         ),
       );
@@ -108,16 +92,13 @@ void main() {
       expect(indicatorFinder, findsWidgets);
     });
 
-    testWidgets('should not show playing indicator when not playing',
-        (tester) async {
+    testWidgets('should not show playing indicator when not playing', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SoundTile(
-              sound: testSound,
-              isPlaying: false,
-              onTap: () {},
-            ),
+            body: SoundTile(sound: testSound, isPlaying: false, onTap: () {}),
           ),
         ),
       );

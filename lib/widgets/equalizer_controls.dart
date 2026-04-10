@@ -10,10 +10,7 @@ import '../services/audio_handler.dart';
 class EqualizerControls extends StatefulWidget {
   final SoLoudAudioHandler audioHandler;
 
-  const EqualizerControls({
-    super.key,
-    required this.audioHandler,
-  });
+  const EqualizerControls({super.key, required this.audioHandler});
 
   @override
   State<EqualizerControls> createState() => _EqualizerControlsState();
@@ -75,25 +72,21 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                   Text(
                     'Low-Pass Filter',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w300,
-                        ),
+                      fontWeight: FontWeight.w300,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Reduce high frequency sounds',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                   ),
                 ],
               ),
-              Switch(
-                value: _isEnabled,
-                onChanged: _toggleFilter,
-              ),
+              Switch(value: _isEnabled, onChanged: _toggleFilter),
             ],
           ),
           const SizedBox(height: 32),
@@ -124,11 +117,11 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                       child: Text(
                         '${_frequency.toInt()} Hz',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                            ),
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -147,20 +140,18 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                     Text(
                       '500 Hz',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                     Text(
                       '8000 Hz',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   ],
                 ),
@@ -168,11 +159,10 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                 Text(
                   'Lower frequencies create a warmer, more muffled sound',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                 ),
               ],
             ),
@@ -205,11 +195,11 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                       child: Text(
                         _resonance.toStringAsFixed(1),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                            ),
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                        ),
                       ),
                     ),
                   ],
@@ -228,20 +218,18 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                     Text(
                       'Smooth',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                     Text(
                       'Sharp',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
                     ),
                   ],
                 ),
@@ -249,11 +237,10 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                 Text(
                   'Controls the sharpness of the frequency cutoff',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                 ),
               ],
             ),

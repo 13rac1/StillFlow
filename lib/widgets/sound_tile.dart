@@ -30,7 +30,8 @@ class _SoundTileState extends State<SoundTile> {
 
   @override
   Widget build(BuildContext context) {
-    final hasLayers = widget.sound is EnvironmentSound &&
+    final hasLayers =
+        widget.sound is EnvironmentSound &&
         (widget.sound as EnvironmentSound).layers.isNotEmpty;
 
     return Card(
@@ -50,19 +51,17 @@ class _SoundTileState extends State<SoundTile> {
                     height: 48,
                     decoration: BoxDecoration(
                       color: widget.isPlaying
-                          ? Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.2)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.2)
                           : Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: widget.isPlaying
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.3),
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.3),
                         width: 2,
                       ),
                     ),
@@ -84,28 +83,25 @@ class _SoundTileState extends State<SoundTile> {
                       children: [
                         Text(
                           widget.sound.name,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: widget.isPlaying
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: widget.isPlaying
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                  ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                fontWeight: widget.isPlaying
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                color: widget.isPlaying
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).colorScheme.onSurface,
+                              ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           widget.sound.description,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
                         ),
                       ],
                     ),
@@ -125,9 +121,7 @@ class _SoundTileState extends State<SoundTile> {
                   if (hasLayers && widget.isPlaying)
                     IconButton(
                       icon: Icon(
-                        _isExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
+                        _isExpanded ? Icons.expand_less : Icons.expand_more,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       onPressed: () {
@@ -161,12 +155,11 @@ class _SoundTileState extends State<SoundTile> {
           Text(
             'Sound Layers',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.8),
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 12),
           ...environment.layers.map((layer) {
@@ -181,13 +174,12 @@ class _SoundTileState extends State<SoundTile> {
                       children: [
                         Text(
                           layer.name,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
                                 color: isEnabled
                                     ? Theme.of(context).colorScheme.onSurface
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.5),
+                                    : Theme.of(context).colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
                               ),
                         ),
                         const SizedBox(height: 2),
@@ -198,23 +190,22 @@ class _SoundTileState extends State<SoundTile> {
                                   ? Icons.loop
                                   : Icons.bolt,
                               size: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 4),
                             Text(
                               layer.layerType == LayerType.continuous
                                   ? 'Continuous'
                                   : 'Random',
-                              style:
-                                  Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.5),
-                                      ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
                             ),
                           ],
                         ),

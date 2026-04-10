@@ -45,9 +45,7 @@ void main() {
     testWidgets('should display title and description', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -58,9 +56,7 @@ void main() {
     testWidgets('should show toggle switch', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -70,9 +66,7 @@ void main() {
     testWidgets('should toggle filter when switch is tapped', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -87,9 +81,7 @@ void main() {
     testWidgets('should display frequency slider', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -101,9 +93,7 @@ void main() {
     testWidgets('should display resonance slider', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -114,9 +104,7 @@ void main() {
     testWidgets('should update frequency when slider changes', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -136,9 +124,7 @@ void main() {
     testWidgets('should disable sliders when filter is off', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -154,9 +140,7 @@ void main() {
     testWidgets('should enable sliders when filter is on', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -175,9 +159,7 @@ void main() {
     testWidgets('should show frequency range labels', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -188,9 +170,7 @@ void main() {
     testWidgets('should show resonance range labels', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 
@@ -201,9 +181,7 @@ void main() {
     testWidgets('should show helpful descriptions', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: EqualizerControls(audioHandler: mockHandler),
-          ),
+          home: Scaffold(body: EqualizerControls(audioHandler: mockHandler)),
         ),
       );
 

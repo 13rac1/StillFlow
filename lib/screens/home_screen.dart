@@ -124,10 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text(
           'Still Flow',
-          style: TextStyle(
-            fontWeight: FontWeight.w300,
-            letterSpacing: 2,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w300, letterSpacing: 2),
         ),
         actions: [
           IconButton(
@@ -138,97 +135,89 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .error
-                              .withValues(alpha: 0.7),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorMessage!,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton.tonal(
-                          onPressed: () {
-                            setState(() {
-                              _isLoading = true;
-                              _errorMessage = null;
-                            });
-                            _initializeAudio();
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Header section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ambient Sounds',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w300,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap to play or pause',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                          ),
-                        ],
-                      ),
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.error.withValues(alpha: 0.7),
                     ),
-                    const SizedBox(height: 8),
-                    // Sound tiles
-                    ...SoundLibrary.all.map((sound) {
-                      final isCurrentlyPlaying =
-                          _audioHandler?.currentSound?.id == sound.id && _isPlaying;
-                      return SoundTile(
-                        sound: sound,
-                        isPlaying: isCurrentlyPlaying,
-                        onTap: () => _handleSoundTap(sound),
-                        enabledLayers: _enabledLayers,
-                        onLayerToggle: _handleLayerToggle,
-                      );
-                    }),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        setState(() {
+                          _isLoading = true;
+                          _errorMessage = null;
+                        });
+                        _initializeAudio();
+                      },
+                      child: const Text('Retry'),
+                    ),
                   ],
                 ),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              children: [
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ambient Sounds',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.w300,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to play or pause',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Sound tiles
+                ...SoundLibrary.all.map((sound) {
+                  final isCurrentlyPlaying =
+                      _audioHandler?.currentSound?.id == sound.id && _isPlaying;
+                  return SoundTile(
+                    sound: sound,
+                    isPlaying: isCurrentlyPlaying,
+                    onTap: () => _handleSoundTap(sound),
+                    enabledLayers: _enabledLayers,
+                    onLayerToggle: _handleLayerToggle,
+                  );
+                }),
+              ],
+            ),
     );
   }
 }

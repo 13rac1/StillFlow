@@ -16,11 +16,7 @@ void main() {
       // Capture and suppress console output
       await runZoned(
         () async {
-          await tester.pumpWidget(
-            const MaterialApp(
-              home: HomeScreen(),
-            ),
-          );
+          await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
           expect(find.text('Still Flow'), findsOneWidget);
           expect(find.byIcon(Icons.tune), findsOneWidget); // Equalizer button
@@ -39,11 +35,7 @@ void main() {
     testWidgets('should display loading indicator initially', (tester) async {
       await runZoned(
         () async {
-          await tester.pumpWidget(
-            const MaterialApp(
-              home: HomeScreen(),
-            ),
-          );
+          await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
           // Initially shows loading
           expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -58,15 +50,12 @@ void main() {
       );
     });
 
-    testWidgets('should handle concurrent initialization gracefully',
-        (tester) async {
+    testWidgets('should handle concurrent initialization gracefully', (
+      tester,
+    ) async {
       await runZoned(
         () async {
-          await tester.pumpWidget(
-            const MaterialApp(
-              home: HomeScreen(),
-            ),
-          );
+          await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
           // Wait for initialization to complete
           await tester.pump(const Duration(milliseconds: 100));
@@ -88,11 +77,7 @@ void main() {
     testWidgets('should have dark theme applied', (tester) async {
       await runZoned(
         () async {
-          await tester.pumpWidget(
-            const MaterialApp(
-              home: HomeScreen(),
-            ),
-          );
+          await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
           final appBar = tester.widget<AppBar>(find.byType(AppBar));
 
