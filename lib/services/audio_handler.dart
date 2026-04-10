@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import '../models/sound.dart';
 
@@ -49,7 +50,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   Future<void> initSoloud() async {
     if (!_soloud.isInitialized) {
       await _soloud.init();
-      print('✅ flutter_soloud initialized in handler');
+      debugPrint('✅ flutter_soloud initialized in handler');
     }
   }
 
@@ -70,10 +71,10 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         mode: LoadMode.disk,
       );
       _loadedSources[assetPath] = audioSource;
-      print('✅ Loaded audio: $assetPath');
+      debugPrint('✅ Loaded audio: $assetPath');
       return audioSource;
     } catch (e) {
-      print('❌ Error loading audio $assetPath: $e');
+      debugPrint('❌ Error loading audio $assetPath: $e');
       rethrow;
     }
   }
@@ -117,7 +118,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       // Update playback state
       _updatePlaybackState(playing: true);
 
-      print('🔊 Playing: ${sound.name} (gapless loop)');
+      debugPrint('🔊 Playing: ${sound.name} (gapless loop)');
 
       // If this is an EnvironmentSound, auto-enable default layers
       if (sound is EnvironmentSound) {
@@ -126,7 +127,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         }
       }
     } catch (e) {
-      print('❌ Error playing sound: $e');
+      debugPrint('❌ Error playing sound: $e');
       rethrow;
     }
   }
@@ -134,7 +135,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   /// Toggle a layer on or off
   Future<void> toggleLayer(String layerId, bool enabled) async {
     if (_currentSound is! EnvironmentSound) {
-      print('⚠️  Current sound is not an environment, cannot toggle layers');
+      debugPrint('⚠️  Current sound is not an environment, cannot toggle layers');
       return;
     }
 
@@ -142,7 +143,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     final layer = environment.getLayerById(layerId);
 
     if (layer == null) {
-      print('⚠️  Layer $layerId not found');
+      debugPrint('⚠️  Layer $layerId not found');
       return;
     }
 
@@ -174,7 +175,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
         _soloud.setPan(handle, pan);
         _continuousLayerHandles[layer.id] = handle;
-        print(
+        debugPrint(
           '🎵 Enabled continuous layer: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})',
         );
       } else {
@@ -185,14 +186,14 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         }
         _randomLayerSources[layer.id] = sources;
         _scheduleRandomEvent(layer);
-        print(
+        debugPrint(
           '⏰ Scheduled random layer: ${layer.name} (${sources.length} variants)',
         );
       }
 
       _enabledLayers.add(layer.id);
     } catch (e) {
-      print('❌ Error enabling layer ${layer.name}: $e');
+      debugPrint('❌ Error enabling layer ${layer.name}: $e');
     }
   }
 
@@ -214,13 +215,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
     _randomLayerSources.remove(layerId);
     _enabledLayers.remove(layerId);
-    print('🔇 Disabled layer: $layerId');
+    debugPrint('🔇 Disabled layer: $layerId');
   }
 
   /// Schedule a random event to play
   void _scheduleRandomEvent(SoundLayer layer) {
     if (layer.minIntervalSeconds == null || layer.maxIntervalSeconds == null) {
-      print('⚠️  Random layer ${layer.name} missing interval configuration');
+      debugPrint('⚠️  Random layer ${layer.name} missing interval configuration');
       return;
     }
 
@@ -247,7 +248,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         );
 
         _soloud.setPan(handle, pan);
-        print(
+        debugPrint(
           '💥 Random event: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})',
         );
 
@@ -255,7 +256,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
           _scheduleRandomEvent(layer);
         }
       } catch (e) {
-        print('❌ Error playing random event ${layer.name}: $e');
+        debugPrint('❌ Error playing random event ${layer.name}: $e');
       }
     });
 
@@ -301,7 +302,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
       _updatePlaybackState(playing: true);
     } catch (e) {
-      print('❌ Error resuming: $e');
+      debugPrint('❌ Error resuming: $e');
     }
   }
 
@@ -323,7 +324,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
       _updatePlaybackState(playing: false);
     } catch (e) {
-      print('❌ Error pausing: $e');
+      debugPrint('❌ Error pausing: $e');
     }
   }
 
@@ -358,9 +359,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       mediaItem.add(null);
 
       _updatePlaybackState(playing: false);
-      print('⏹️  Stopped playback');
+      debugPrint('⏹️  Stopped playback');
     } catch (e) {
-      print('❌ Error stopping: $e');
+      debugPrint('❌ Error stopping: $e');
     }
   }
 
@@ -415,7 +416,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     try {
       _soloud.setVolume(_baseHandle!, volume);
     } catch (e) {
-      print('❌ Error setting volume: $e');
+      debugPrint('❌ Error setting volume: $e');
     }
   }
 
@@ -426,7 +427,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     try {
       return _soloud.getVolume(_baseHandle!);
     } catch (e) {
-      print('❌ Error getting volume: $e');
+      debugPrint('❌ Error getting volume: $e');
       return 1.0;
     }
   }
@@ -444,13 +445,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
       _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
 
-      print(
+      debugPrint(
         '🎛️  Low-pass filter enabled (${_lowPassFrequency.toInt()} Hz, resonance: ${_lowPassResonance.toStringAsFixed(1)})',
       );
     } else {
       // Deactivate filter
       _soloud.filters.biquadResonantFilter.deactivate();
-      print('🎛️  Low-pass filter disabled');
+      debugPrint('🎛️  Low-pass filter disabled');
     }
   }
 
@@ -460,7 +461,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
     if (_isLowPassEnabled) {
       _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
-      print('🎛️  Low-pass frequency: ${_lowPassFrequency.toInt()} Hz');
+      debugPrint('🎛️  Low-pass frequency: ${_lowPassFrequency.toInt()} Hz');
     }
   }
 
@@ -470,7 +471,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
     if (_isLowPassEnabled) {
       _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
-      print('🎛️  Low-pass resonance: ${_lowPassResonance.toStringAsFixed(1)}');
+      debugPrint('🎛️  Low-pass resonance: ${_lowPassResonance.toStringAsFixed(1)}');
     }
   }
 
@@ -490,9 +491,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       }
       _loadedSources.clear();
 
-      print('✅ Audio handler disposed');
+      debugPrint('✅ Audio handler disposed');
     } catch (e) {
-      print('❌ Error disposing audio handler: $e');
+      debugPrint('❌ Error disposing audio handler: $e');
     }
   }
 }

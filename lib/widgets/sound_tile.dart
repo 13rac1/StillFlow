@@ -219,7 +219,7 @@ class _SoundTileState extends State<SoundTile> {
                             widget.onLayerToggle!(layer.id, value);
                           }
                         : null,
-                    activeColor: Theme.of(context).colorScheme.primary,
+                    activeThumbColor: Theme.of(context).colorScheme.primary,
                   ),
                 ],
               ),

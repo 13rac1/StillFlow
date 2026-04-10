@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:audio_session/audio_session.dart';
 import '../models/sound.dart';
@@ -52,19 +53,19 @@ class AudioService {
       // Always try to initialize - SoLoud handles already-initialized state internally
       if (!_soloud.isInitialized) {
         await _soloud.init();
-        print('✅ flutter_soloud initialized successfully');
+        debugPrint('✅ flutter_soloud initialized successfully');
       } else {
-        print('✅ flutter_soloud already initialized');
+        debugPrint('✅ flutter_soloud already initialized');
       }
     } catch (e) {
       // If init fails, deinit and retry once
-      print('⚠️  Initialization error, retrying: $e');
+      debugPrint('⚠️  Initialization error, retrying: $e');
       try {
         _soloud.deinit();
         await _soloud.init();
-        print('✅ flutter_soloud initialized successfully on retry');
+        debugPrint('✅ flutter_soloud initialized successfully on retry');
       } catch (retryError) {
-        print('❌ Error initializing flutter_soloud after retry: $retryError');
+        debugPrint('❌ Error initializing flutter_soloud after retry: $retryError');
         rethrow;
       }
     }
@@ -88,9 +89,9 @@ class AudioService {
         mode: LoadMode.disk,
       );
       _loadedSounds[sound.id] = audioSource;
-      print('✅ Loaded sound: ${sound.name}');
+      debugPrint('✅ Loaded sound: ${sound.name}');
     } catch (e) {
-      print('❌ Error loading sound ${sound.name}: $e');
+      debugPrint('❌ Error loading sound ${sound.name}: $e');
       rethrow;
     }
   }
@@ -119,9 +120,9 @@ class AudioService {
       _currentHandle = handle;
       _currentSound = sound;
 
-      print('🔊 Playing: ${sound.name} (gapless loop enabled)');
+      debugPrint('🔊 Playing: ${sound.name} (gapless loop enabled)');
     } catch (e) {
-      print('❌ Error playing sound: $e');
+      debugPrint('❌ Error playing sound: $e');
       rethrow;
     }
   }
@@ -132,9 +133,9 @@ class AudioService {
 
     try {
       _soloud.pauseSwitch(_currentHandle!);
-      print('⏸️  Paused playback');
+      debugPrint('⏸️  Paused playback');
     } catch (e) {
-      print('❌ Error pausing: $e');
+      debugPrint('❌ Error pausing: $e');
     }
   }
 
@@ -144,9 +145,9 @@ class AudioService {
 
     try {
       _soloud.pauseSwitch(_currentHandle!);
-      print('▶️  Resumed playback');
+      debugPrint('▶️  Resumed playback');
     } catch (e) {
-      print('❌ Error resuming: $e');
+      debugPrint('❌ Error resuming: $e');
     }
   }
 
@@ -158,9 +159,9 @@ class AudioService {
       _soloud.stop(_currentHandle!);
       _currentHandle = null;
       _currentSound = null;
-      print('⏹️  Stopped playback');
+      debugPrint('⏹️  Stopped playback');
     } catch (e) {
-      print('❌ Error stopping: $e');
+      debugPrint('❌ Error stopping: $e');
     }
   }
 
@@ -171,7 +172,7 @@ class AudioService {
     try {
       _soloud.setVolume(_currentHandle!, volume);
     } catch (e) {
-      print('❌ Error setting volume: $e');
+      debugPrint('❌ Error setting volume: $e');
     }
   }
 
@@ -182,7 +183,7 @@ class AudioService {
     try {
       return _soloud.getVolume(_currentHandle!);
     } catch (e) {
-      print('❌ Error getting volume: $e');
+      debugPrint('❌ Error getting volume: $e');
       return 1.0;
     }
   }
@@ -202,9 +203,9 @@ class AudioService {
 
       // Deinitialize the engine
       _soloud.deinit();
-      print('✅ Audio service disposed');
+      debugPrint('✅ Audio service disposed');
     } catch (e) {
-      print('❌ Error disposing audio service: $e');
+      debugPrint('❌ Error disposing audio service: $e');
     }
   }
 }

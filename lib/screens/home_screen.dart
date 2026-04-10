@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _errorMessage = 'Failed to initialize audio: $e';
         });
       }
-      print('❌ Audio service initialization failed: $e');
+      debugPrint('❌ Audio service initialization failed: $e');
     }
   }
 
