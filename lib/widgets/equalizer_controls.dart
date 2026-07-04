@@ -129,8 +129,8 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                 const SizedBox(height: 12),
                 Slider(
                   value: _frequency,
-                  min: 500,
-                  max: 8000,
+                  min: SoLoudAudioHandler.minLowPassFrequency,
+                  max: SoLoudAudioHandler.maxLowPassFrequency,
                   divisions: 75, // 100 Hz steps
                   onChanged: _isEnabled ? _updateFrequency : null,
                 ),
@@ -138,7 +138,7 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '500 Hz',
+                      '${SoLoudAudioHandler.minLowPassFrequency.toInt()} Hz',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
@@ -146,7 +146,7 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                       ),
                     ),
                     Text(
-                      '8000 Hz',
+                      '${SoLoudAudioHandler.maxLowPassFrequency.toInt()} Hz',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(
                           context,
@@ -207,9 +207,9 @@ class _EqualizerControlsState extends State<EqualizerControls> {
                 const SizedBox(height: 12),
                 Slider(
                   value: _resonance,
-                  min: 0.1,
-                  max: 5.0,
-                  divisions: 49,
+                  min: SoLoudAudioHandler.minLowPassResonance,
+                  max: SoLoudAudioHandler.maxLowPassResonance,
+                  divisions: 49, // 0.1 resonance steps
                   onChanged: _isEnabled ? _updateResonance : null,
                 ),
                 Row(

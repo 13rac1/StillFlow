@@ -15,6 +15,12 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   final SoLoud _soloud = SoLoud.instance;
   final Random _random = Random();
 
+  // Low-pass filter bounds (single source of truth shared with the UI sliders)
+  static const double minLowPassFrequency = 500.0;
+  static const double maxLowPassFrequency = 8000.0;
+  static const double minLowPassResonance = 0.1;
+  static const double maxLowPassResonance = 5.0;
+
   // Low-pass filter state
   bool _isLowPassEnabled = false;
   double _lowPassFrequency = 2000.0; // Hz (default cutoff)
@@ -539,9 +545,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
-  /// Set low-pass filter frequency (10-16000 Hz)
+  /// Set low-pass filter frequency (clamped to [minLowPassFrequency],
+  /// [maxLowPassFrequency])
   void setLowPassFrequency(double frequency) {
-    _lowPassFrequency = frequency.clamp(10.0, 16000.0);
+    _lowPassFrequency = frequency.clamp(
+      minLowPassFrequency,
+      maxLowPassFrequency,
+    );
 
     if (_isLowPassEnabled) {
       _soloud.filters.biquadResonantFilter.frequency.value = _lowPassFrequency;
@@ -549,9 +559,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
-  /// Set low-pass filter resonance (0.1-20)
+  /// Set low-pass filter resonance (clamped to [minLowPassResonance],
+  /// [maxLowPassResonance])
   void setLowPassResonance(double resonance) {
-    _lowPassResonance = resonance.clamp(0.1, 20.0);
+    _lowPassResonance = resonance.clamp(
+      minLowPassResonance,
+      maxLowPassResonance,
+    );
 
     if (_isLowPassEnabled) {
       _soloud.filters.biquadResonantFilter.resonance.value = _lowPassResonance;
