@@ -22,6 +22,10 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   // Position tracking for long-running playback
   DateTime? _playbackStartTime;
+  // Elapsed playback accumulated across pause/resume cycles. _playbackStartTime
+  // only marks the current resume, so the reported position is this plus the
+  // time since the last resume.
+  Duration _accumulatedPosition = Duration.zero;
   Timer? _positionUpdateTimer;
   static const Duration _positionUpdateInterval = Duration(seconds: 30);
 
@@ -151,7 +155,8 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       _baseHandle = handle;
       _currentSound = sound;
 
-      // Start position tracking
+      // Start position tracking from zero for the newly started sound
+      _accumulatedPosition = Duration.zero;
       _startPositionTracking();
 
       // Update playback state
@@ -381,6 +386,12 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       }
       _randomLayerTimers.clear();
 
+      // Bank elapsed time before stopping tracking so the reported position
+      // doesn't reset to zero on the next resume.
+      if (_playbackStartTime != null) {
+        _accumulatedPosition += DateTime.now().difference(_playbackStartTime!);
+      }
+
       // Stop position tracking while paused
       _stopPositionTracking();
 
@@ -401,6 +412,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       // Stop base sound
       _soloud.stop(_baseHandle!);
       _baseHandle = null;
+
+      // Reset accumulated position for the next sound
+      _accumulatedPosition = Duration.zero;
 
       // Stop all continuous layers
       for (final handle in _continuousLayerHandles.values) {
@@ -427,6 +441,14 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
+  /// Total elapsed playback position, accounting for pause/resume cycles
+  Duration get _currentPosition {
+    final sinceResume = _playbackStartTime != null
+        ? DateTime.now().difference(_playbackStartTime!)
+        : Duration.zero;
+    return _accumulatedPosition + sinceResume;
+  }
+
   /// Start tracking playback position for long-running audio
   void _startPositionTracking() {
     _playbackStartTime = DateTime.now();
@@ -435,8 +457,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     // Update position every 30 seconds to keep MediaSession alive
     _positionUpdateTimer = Timer.periodic(_positionUpdateInterval, (timer) {
       if (_baseHandle != null && _playbackStartTime != null) {
-        final elapsed = DateTime.now().difference(_playbackStartTime!);
-        _updatePlaybackState(playing: true, position: elapsed);
+        _updatePlaybackState(playing: true, position: _currentPosition);
       }
     });
   }
@@ -450,11 +471,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   /// Update playback state for media controls
   void _updatePlaybackState({required bool playing, Duration? position}) {
-    final currentPosition =
-        position ??
-        (_playbackStartTime != null
-            ? DateTime.now().difference(_playbackStartTime!)
-            : Duration.zero);
+    final currentPosition = position ?? _currentPosition;
 
     playbackState.add(
       playbackState.value.copyWith(
