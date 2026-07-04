@@ -462,6 +462,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
   /// Start tracking playback position for long-running audio
   void _startPositionTracking() {
+    // Bank any segment already in progress (duplicate play() while playing)
+    // so restarting tracking never drops elapsed time.
+    if (_playbackStartTime != null) {
+      _accumulatedPosition += DateTime.now().difference(_playbackStartTime!);
+    }
     _playbackStartTime = DateTime.now();
     _positionUpdateTimer?.cancel();
 
