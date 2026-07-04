@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPlaying = false;
   Set<String> _enabledLayers = {};
   String? _errorMessage;
+  bool _playbackListenerAttached = false;
 
   @override
   void initState() {
@@ -29,8 +30,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initializeAudio() async {
     try {
-      // Initialize audio service with our handler
-      _audioHandler = await AudioService.init(
+      // Initialize audio service with our handler. audio_service only allows
+      // one successful init() per process, so reuse the existing handler on
+      // retry and re-run only the steps that failed.
+      _audioHandler ??= await AudioService.init(
         builder: () => SoLoudAudioHandler(),
         config: const AudioServiceConfig(
           androidNotificationChannelId: 'com.stillflow.audio',
@@ -46,15 +49,19 @@ class _HomeScreenState extends State<HomeScreen> {
       // Initialize flutter_soloud
       await _audioHandler!.initSoloud();
 
-      // Listen to playback state changes and sync enabled layers
-      _audioHandler!.playbackState.listen((state) {
-        if (mounted) {
-          setState(() {
-            _isPlaying = state.playing;
-            _enabledLayers = _audioHandler?.enabledLayers ?? {};
-          });
-        }
-      });
+      // Listen to playback state changes and sync enabled layers. Guard so a
+      // retry after a partial failure doesn't subscribe a second time.
+      if (!_playbackListenerAttached) {
+        _audioHandler!.playbackState.listen((state) {
+          if (mounted) {
+            setState(() {
+              _isPlaying = state.playing;
+              _enabledLayers = _audioHandler?.enabledLayers ?? {};
+            });
+          }
+        });
+        _playbackListenerAttached = true;
+      }
 
       if (mounted) {
         setState(() {
