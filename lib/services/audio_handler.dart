@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import '../models/sound.dart';
@@ -46,11 +47,49 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   double get lowPassFrequency => _lowPassFrequency;
   double get lowPassResonance => _lowPassResonance;
 
-  /// Initialize flutter_soloud
+  /// Initialize the audio session and flutter_soloud
+  ///
+  /// Configures the platform [AudioSession] (mix-with-others, Android audio
+  /// attributes, focus gain) BEFORE initializing SoLoud so media playback and
+  /// audio focus behave correctly. If SoLoud fails to initialize (e.g. a
+  /// lingering engine after a hot restart), it deinitializes and retries once.
   Future<void> initSoloud() async {
-    if (!_soloud.isInitialized) {
+    if (_soloud.isInitialized) return;
+
+    // Configure audio session for media playback and focus handling
+    final session = await AudioSession.instance;
+    await session.configure(
+      const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.mixWithOthers,
+        avAudioSessionMode: AVAudioSessionMode.defaultMode,
+        avAudioSessionRouteSharingPolicy:
+            AVAudioSessionRouteSharingPolicy.defaultPolicy,
+        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: true,
+      ),
+    );
+
+    try {
       await _soloud.init();
       debugPrint('✅ flutter_soloud initialized in handler');
+    } catch (e) {
+      // Hot restart can leave a lingering engine; deinit and retry once.
+      debugPrint('⚠️  flutter_soloud init error, retrying: $e');
+      try {
+        _soloud.deinit();
+        await _soloud.init();
+        debugPrint('✅ flutter_soloud initialized in handler on retry');
+      } catch (retryError) {
+        debugPrint('❌ Error initializing flutter_soloud after retry: $retryError');
+        rethrow;
+      }
     }
   }
 
@@ -233,6 +272,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
     final timer = Timer(Duration(seconds: delaySeconds), () async {
       try {
+        // Defense in depth: don't play or reschedule while paused/stopped.
+        if (!playbackState.value.playing) return;
+
         final sources = _randomLayerSources[layer.id];
         if (sources == null || sources.isEmpty) return;
 
@@ -260,6 +302,8 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       }
     });
 
+    // Replace any pending timer so duplicate play() calls can't stack events
+    _randomLayerTimers[layer.id]?.cancel();
     _randomLayerTimers[layer.id] = timer;
   }
 
@@ -289,12 +333,23 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     if (_baseHandle == null) return;
 
     try {
-      // Resume base sound
-      _soloud.pauseSwitch(_baseHandle!);
+      // Resume base sound (absolute set so duplicate commands stay idempotent)
+      _soloud.setPause(_baseHandle!, false);
 
       // Resume all continuous layers
       for (final handle in _continuousLayerHandles.values) {
-        _soloud.pauseSwitch(handle);
+        _soloud.setPause(handle, false);
+      }
+
+      // Restart random event cycles for any enabled random layers
+      if (_currentSound is EnvironmentSound) {
+        final environment = _currentSound as EnvironmentSound;
+        for (final layerId in _enabledLayers) {
+          final layer = environment.getLayerById(layerId);
+          if (layer != null && layer.layerType == LayerType.random) {
+            _scheduleRandomEvent(layer);
+          }
+        }
       }
 
       // Restart position tracking from current position
@@ -311,13 +366,20 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     if (_baseHandle == null) return;
 
     try {
-      // Pause base sound
-      _soloud.pauseSwitch(_baseHandle!);
+      // Pause base sound (absolute set so duplicate commands stay idempotent)
+      _soloud.setPause(_baseHandle!, true);
 
       // Pause all continuous layers
       for (final handle in _continuousLayerHandles.values) {
-        _soloud.pauseSwitch(handle);
+        _soloud.setPause(handle, true);
       }
+
+      // Cancel random event timers so one-shots stop firing while paused.
+      // Sources and enabled state are left intact so play() can reschedule.
+      for (final timer in _randomLayerTimers.values) {
+        timer.cancel();
+      }
+      _randomLayerTimers.clear();
 
       // Stop position tracking while paused
       _stopPositionTracking();

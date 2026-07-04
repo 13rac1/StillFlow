@@ -90,25 +90,24 @@ flutter format .
 
 ### Audio System (Critical Implementation Detail)
 
-The app uses a **dual-service audio architecture** combining flutter_soloud and audio_service:
+The app uses a **single audio handler** built on flutter_soloud and audio_service:
 
-1. **SoLoudAudioHandler** (`lib/services/audio_handler.dart`)
+**SoLoudAudioHandler** (`lib/services/audio_handler.dart`)
    - Wraps flutter_soloud with audio_service's `BaseAudioHandler`
-   - Manages gapless looping via SoLoud.instance
+   - Manages gapless looping via SoLoud.instance, plus continuous and random one-shot layers
+   - `initSoloud()` owns the full startup sequence: it configures the platform
+     `AudioSession` (mix-with-others, Android audio attributes, focus gain)
+     BEFORE calling `_soloud.init()`, and retries once (deinit/reinit) on failure
+     to handle hot restart
    - Updates media controls and notification state
    - Handles play/pause/stop commands from system controls
    - Uses `LoadMode.disk` for streaming long audio files
 
-2. **AudioService** (`lib/services/audio_service.dart`)
-   - Singleton wrapper around flutter_soloud
-   - Configures `AudioSession` for media playback
-   - Manages audio focus and session lifecycle
-   - Used for direct playback without media controls (if needed)
-
 **Important:** The audio handler initialization requires:
 - `WidgetsFlutterBinding.ensureInitialized()` before `AudioService.init()`
-- `AudioSession` configuration before SoLoud initialization
-- Error handling for hot restart scenarios (deinit/reinit pattern)
+  (the `AudioService.init` from package:audio_service, which builds the handler)
+- `AudioSession` configuration before SoLoud initialization (both inside `initSoloud()`)
+- Error handling for hot restart scenarios (deinit/reinit pattern in `initSoloud()`)
 
 ### Project Structure
 
@@ -120,8 +119,7 @@ lib/
 ├── screens/
 │   └── home_screen.dart         # Main UI, audio handler initialization & state
 ├── services/
-│   ├── audio_handler.dart       # SoLoudAudioHandler (audio_service integration)
-│   └── audio_service.dart       # AudioService singleton (flutter_soloud wrapper)
+│   └── audio_handler.dart       # SoLoudAudioHandler (audio session + flutter_soloud + audio_service)
 └── widgets/
     └── sound_tile.dart          # Sound selection tile widget
 
@@ -212,8 +210,8 @@ flutter run -d macos
 ### Audio Initialization Failures
 
 If you see "flutter_soloud already initialized" errors during hot restart:
-- The code handles this with deinit/reinit pattern in `AudioService.init()`
-- Check `lib/services/audio_service.dart:48-66` for retry logic
+- The code handles this with a deinit/reinit pattern in `SoLoudAudioHandler.initSoloud()`
+- Check the retry logic in `lib/services/audio_handler.dart` (`initSoloud()` method)
 
 ### Media Controls Not Showing
 

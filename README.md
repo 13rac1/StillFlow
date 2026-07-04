@@ -206,8 +206,7 @@ lib/
 ├── screens/
 │   └── home_screen.dart     # Main screen with audio controls
 ├── services/
-│   ├── audio_handler.dart   # Audio service handler for media controls
-│   └── audio_service.dart   # flutter_soloud audio engine wrapper
+│   └── audio_handler.dart   # Audio handler: audio session, flutter_soloud engine, media controls
 └── widgets/
     └── sound_tile.dart      # Sound selection tile widget
 
