@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # The test suite loads flutter_soloud's native library over FFI, so
+      # `make test` builds the Linux desktop bundle first. That build needs
+      # the desktop toolchain and ALSA headers. On x86-64 runners the
+      # plugin's bundled codec libraries are used, so no codec -dev
+      # packages are required (arm64 hosts need them; see README).
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev libasound2-dev
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: make test
