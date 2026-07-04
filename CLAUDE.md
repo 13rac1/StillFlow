@@ -83,7 +83,7 @@ flutter build linux --release
 flutter analyze
 
 # Format code
-flutter format .
+dart format .
 ```
 
 ## Architecture
@@ -121,7 +121,9 @@ lib/
 ├── services/
 │   └── audio_handler.dart       # SoLoudAudioHandler (audio session + flutter_soloud + audio_service)
 └── widgets/
-    └── sound_tile.dart          # Sound selection tile widget
+    ├── sound_tile.dart          # Sound selection tile widget
+    ├── equalizer_controls.dart  # Low-pass filter bottom sheet
+    └── about_sheet.dart         # About/attribution bottom sheet
 
 assets/
 ├── audio/                        # OGG Vorbis loops (5-6MB each, 44.1kHz stereo)

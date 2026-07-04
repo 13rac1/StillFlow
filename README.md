@@ -208,7 +208,9 @@ lib/
 ├── services/
 │   └── audio_handler.dart   # Audio handler: audio session, flutter_soloud engine, media controls
 └── widgets/
-    └── sound_tile.dart      # Sound selection tile widget
+    ├── sound_tile.dart      # Sound selection tile widget
+    ├── equalizer_controls.dart  # Low-pass filter bottom sheet
+    └── about_sheet.dart     # About/attribution bottom sheet
 
 assets/
 ├── audio/                    # Ambient sound loops (.ogg format)
