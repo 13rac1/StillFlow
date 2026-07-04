@@ -169,6 +169,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         for (final layer in sound.defaultEnabledLayers) {
           await toggleLayer(layer.id, true);
         }
+        // Re-emit so listeners (e.g. HomeScreen's enabled-layer sync) observe
+        // the auto-enabled layers instead of the pre-enable snapshot above.
+        if (sound.defaultEnabledLayers.isNotEmpty) {
+          _updatePlaybackState(playing: true);
+        }
       }
     } catch (e) {
       debugPrint('❌ Error playing sound: $e');
