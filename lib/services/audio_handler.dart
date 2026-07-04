@@ -49,6 +49,15 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   static const Duration _wanderUpdateInterval = Duration(milliseconds: 750);
   Timer? _wanderTimer;
 
+  // Spatial one-shots (feature 2): random events (thunder, birdsong) spawn at
+  // a random azimuth around the listener at a random distance chosen for the
+  // layer's character. Attenuation is linear and gentle so the layer's own
+  // volume randomization stays the dominant loudness cue while distance adds
+  // subtle depth. min/max distance are generous so events are never silenced.
+  static const double _oneShotMinDistance = 1.0; // full volume within this
+  static const double _oneShotMaxDistance = 40.0; // generous → gentle falloff
+  static const double _oneShotRolloff = 0.6; // subtle depth, still audible
+
   // Position tracking for long-running playback
   DateTime? _playbackStartTime;
   // Elapsed playback accumulated across pause/resume cycles. _playbackStartTime
@@ -340,17 +349,40 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         // Pick a random variant
         final audioSource = sources[_random.nextInt(sources.length)];
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
-        final pan = _randomInRange(layer.minPan, layer.maxPan);
 
-        final handle = _soloud.play(
+        // Spawn at a random point on a circle around the listener. The
+        // layer's own minVolume/maxVolume stays the play3d volume; distance
+        // attenuation layers subtle depth on top.
+        final range = _oneShotDistanceRange(layer);
+        final distance = _randomInRange(range.near, range.far);
+        final azimuth = _random.nextDouble() * 2 * pi;
+        final x = distance * sin(azimuth);
+        final z = distance * cos(azimuth);
+
+        final handle = _soloud.play3d(
           audioSource,
+          x,
+          0,
+          z,
           volume: volume,
           looping: false,
         );
+        _soloud.set3dSourceMinMaxDistance(
+          handle,
+          _oneShotMinDistance,
+          _oneShotMaxDistance,
+        );
+        _soloud.set3dSourceAttenuation(
+          handle,
+          _attenuationLinear,
+          _oneShotRolloff,
+        );
 
-        _soloud.setPan(handle, pan);
         debugPrint(
-          '💥 Random event: ${layer.name} (vol: ${volume.toStringAsFixed(2)}, pan: ${pan.toStringAsFixed(2)})',
+          '💥 Random event: ${layer.name} '
+          '(vol: ${volume.toStringAsFixed(2)}, '
+          'dist: ${distance.toStringAsFixed(1)}, '
+          'az: ${(azimuth * 180 / pi).toStringAsFixed(0)}°)',
         );
 
         if (_enabledLayers.contains(layer.id)) {
@@ -392,6 +424,19 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     final z = _wanderRadiusZ * cos(phase);
     _soloud.set3dSourcePosition(handle, x, 0, z);
   }
+
+  /// Spawn-distance range (near, far) for a one-shot layer, chosen by the
+  /// layer's character. Thunder reads as distant weather so it spawns farther
+  /// out; closer layers like birdsong spawn nearer. Kept as a handler-side
+  /// heuristic to avoid bloating the Sound model.
+  ({double near, double far}) _oneShotDistanceRange(SoundLayer layer) {
+    if (_isRollingThunderLayer(layer)) return (near: 8.0, far: 20.0);
+    return (near: 2.0, far: 8.0);
+  }
+
+  /// Whether a layer is the thunder layer, which gets distant spawns
+  /// (feature 2) and rolling cross-sky motion (feature 3).
+  bool _isRollingThunderLayer(SoundLayer layer) => layer.id == 'rain_thunder';
 
   /// Get a random value within a range
   double _randomInRange(double min, double max) {
