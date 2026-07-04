@@ -34,14 +34,18 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   // model is set, so every 3D handle explicitly sets one below.
   static const int _attenuationLinear = 2; // SoLoud LINEAR_DISTANCE model
 
-  // Wandering base loop (feature 1): the base environment loop slowly orbits
-  // the listener on a gentle ellipse so the ambience feels alive without ever
-  // becoming directional or faint. The orbit radius sits close to the min
-  // distance and uses a rolloff well under 1 with a generous max distance, so
-  // the loop's volume only breathes by a couple of percent across a full
-  // orbit — the base loop must always remain the dominant sound.
+  // Wandering base loop (feature 1): the base environment loop drifts on a
+  // gentle ellipse so the ambience feels alive without ever becoming
+  // directional or faint. The ellipse is centered ahead of the listener, not
+  // around them: SoLoud pans by direction ((dot(speaker, dir) + 1) / 2 per
+  // ear), so a source passing directly beside the listener would land ~95/5
+  // between ears. Keeping the source in front bounds the lateral angle to
+  // ~24°, a worst-case inter-ear ratio near 1.7:1 (~4.6 dB) — a gentle drift.
+  // Rolloff well under 1 with a generous max distance keeps the loop's volume
+  // breathing to a few percent — the base loop must remain the dominant sound.
   static const double _wanderOrbitPeriodSeconds = 240.0; // 4-minute full orbit
-  static const double _wanderRadiusX = 3.0; // left/right (pan) swing
+  static const double _wanderCenterZ = -6.0; // orbit center, ahead (-Z)
+  static const double _wanderRadiusX = 2.0; // left/right (pan) swing
   static const double _wanderRadiusZ = 1.5; // front/back swing (subtle)
   static const double _wanderMinDistance = 1.0; // full volume within this
   static const double _wanderMaxDistance = 30.0; // generous → gentle falloff
@@ -201,13 +205,14 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         ),
       );
 
-      // Play with gapless looping as a 3D source so it can wander around the
-      // listener. Phase 0 places it at (0, 0, radiusZ) — directly in front.
+      // Play with gapless looping as a 3D source so it can wander ahead of
+      // the listener. Phase 0 places it at the near edge of the orbit,
+      // directly in front (the listener faces -Z).
       final handle = _soloud.play3d(
         audioSource,
         0,
         0,
-        _wanderRadiusZ,
+        _wanderCenterZ + _wanderRadiusZ,
         volume: 1.0,
         looping: true,
         loopingStartAt: Duration.zero,
@@ -452,7 +457,7 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     final tSeconds = _currentPosition.inMilliseconds / 1000.0;
     final phase = 2 * pi * (tSeconds / _wanderOrbitPeriodSeconds);
     final x = _wanderRadiusX * sin(phase);
-    final z = _wanderRadiusZ * cos(phase);
+    final z = _wanderCenterZ + _wanderRadiusZ * cos(phase);
     _soloud.set3dSourcePosition(handle, x, 0, z);
   }
 
