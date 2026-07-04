@@ -58,6 +58,14 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   static const double _oneShotMaxDistance = 40.0; // generous → gentle falloff
   static const double _oneShotRolloff = 0.6; // subtle depth, still audible
 
+  // Rolling thunder (feature 3): a thunder one-shot doesn't sit still — it
+  // starts off to one side and sweeps across the sky (and recedes) over the
+  // clip's own duration, so long rumbles "roll". Only the thunder layer rolls;
+  // other one-shots stay at their static feature-2 position.
+  static const double _thunderSweepArc = pi; // ~180° sweep across the sky
+  static const double _thunderRecedeFactor = 1.6; // ends this× farther out
+  static const Duration _thunderRollInterval = Duration(milliseconds: 500);
+
   // Position tracking for long-running playback
   DateTime? _playbackStartTime;
   // Elapsed playback accumulated across pause/resume cycles. _playbackStartTime
@@ -75,6 +83,10 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   final Map<String, SoundHandle> _continuousLayerHandles = {};
   final Map<String, Timer> _randomLayerTimers = {};
   final Map<String, List<AudioSource>> _randomLayerSources = {};
+
+  // Per-voice timers driving rolling-thunder motion (feature 3). Each cancels
+  // itself when its clip ends; all are cancelled together by pause()/stop().
+  final Set<Timer> _thunderRollTimers = {};
 
   // Current environment and enabled layers
   Sound? _currentSound;
@@ -350,14 +362,21 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         final audioSource = sources[_random.nextInt(sources.length)];
         final volume = _randomInRange(layer.minVolume, layer.maxVolume);
 
-        // Spawn at a random point on a circle around the listener. The
-        // layer's own minVolume/maxVolume stays the play3d volume; distance
-        // attenuation layers subtle depth on top.
+        // Spawn on a circle around the listener. The layer's own
+        // minVolume/maxVolume stays the play3d volume; distance attenuation
+        // layers subtle depth on top.
         final range = _oneShotDistanceRange(layer);
         final distance = _randomInRange(range.near, range.far);
-        final azimuth = _random.nextDouble() * 2 * pi;
-        final x = distance * sin(azimuth);
-        final z = distance * cos(azimuth);
+        final rolling = _isRollingThunderLayer(layer);
+
+        // Rolling thunder starts off to one side (so it can sweep symmetrically
+        // across the listener); other one-shots pick any point on the circle.
+        final rollDirection = _random.nextBool() ? 1.0 : -1.0;
+        final startAzimuth = rolling
+            ? -rollDirection * _thunderSweepArc / 2
+            : _random.nextDouble() * 2 * pi;
+        final x = distance * sin(startAzimuth);
+        final z = distance * cos(startAzimuth);
 
         final handle = _soloud.play3d(
           audioSource,
@@ -382,8 +401,20 @@ class SoLoudAudioHandler extends BaseAudioHandler {
           '💥 Random event: ${layer.name} '
           '(vol: ${volume.toStringAsFixed(2)}, '
           'dist: ${distance.toStringAsFixed(1)}, '
-          'az: ${(azimuth * 180 / pi).toStringAsFixed(0)}°)',
+          'az: ${(startAzimuth * 180 / pi).toStringAsFixed(0)}°'
+          '${rolling ? ', rolling' : ''})',
         );
+
+        // Thunder rolls across the sky over its clip; others stay put.
+        if (rolling) {
+          _startThunderRoll(
+            handle,
+            audioSource,
+            startAzimuth,
+            rollDirection,
+            distance,
+          );
+        }
 
         if (_enabledLayers.contains(layer.id)) {
           _scheduleRandomEvent(layer);
@@ -437,6 +468,53 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   /// Whether a layer is the thunder layer, which gets distant spawns
   /// (feature 2) and rolling cross-sky motion (feature 3).
   bool _isRollingThunderLayer(SoundLayer layer) => layer.id == 'rain_thunder';
+
+  /// Drive a rolling-thunder voice across the sky over its own clip duration.
+  ///
+  /// Sweeps the azimuth ~180° through the listener and recedes into the
+  /// distance so long rumbles "roll". A low-rate timer moves the [handle] via
+  /// set3dSourcePosition and cancels itself once the clip elapses, the voice
+  /// becomes invalid, or playback stops; every such timer is also cancelled by
+  /// pause()/stop() via [_thunderRollTimers].
+  void _startThunderRoll(
+    SoundHandle handle,
+    AudioSource source,
+    double startAzimuth,
+    double rollDirection,
+    double startDistance,
+  ) {
+    final totalMs = _soloud.getLength(source).inMilliseconds;
+    if (totalMs <= 0) return; // unknown length → leave at its start position
+
+    final spawnTime = DateTime.now();
+    final timer = Timer.periodic(_thunderRollInterval, (t) {
+      // Shared timer lifecycle: bail (and clean ourselves out of the tracking
+      // set) once paused/stopped, the voice ends, or the clip elapses.
+      final finished =
+          !playbackState.value.playing ||
+          !_soloud.getIsValidVoiceHandle(handle);
+      final progress =
+          (DateTime.now().difference(spawnTime).inMilliseconds / totalMs).clamp(
+            0.0,
+            1.0,
+          );
+      if (finished || progress >= 1.0) {
+        t.cancel();
+        _thunderRollTimers.remove(t);
+        return;
+      }
+
+      final azimuth = startAzimuth + rollDirection * _thunderSweepArc * progress;
+      final distance = startDistance * (1 + (_thunderRecedeFactor - 1) * progress);
+      _soloud.set3dSourcePosition(
+        handle,
+        distance * sin(azimuth),
+        0,
+        distance * cos(azimuth),
+      );
+    });
+    _thunderRollTimers.add(timer);
+  }
 
   /// Get a random value within a range
   double _randomInRange(double min, double max) {
@@ -519,6 +597,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       }
       _randomLayerTimers.clear();
 
+      // Stop any in-flight rolling-thunder motion (a resumed event that fires
+      // again will start a fresh roll).
+      for (final timer in _thunderRollTimers) {
+        timer.cancel();
+      }
+      _thunderRollTimers.clear();
+
       // Bank elapsed time before stopping tracking so the reported position
       // doesn't reset to zero on the next resume.
       if (_playbackStartTime != null) {
@@ -564,6 +649,12 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         timer.cancel();
       }
       _randomLayerTimers.clear();
+
+      // Cancel all rolling-thunder motion timers
+      for (final timer in _thunderRollTimers) {
+        timer.cancel();
+      }
+      _thunderRollTimers.clear();
 
       _enabledLayers.clear();
       _currentSound = null;
