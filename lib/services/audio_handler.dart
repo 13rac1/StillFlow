@@ -26,6 +26,29 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   double _lowPassFrequency = 2000.0; // Hz (default cutoff)
   double _lowPassResonance = 1.0; // Sharpness of cutoff
 
+  // --- 3D spatial audio ---
+  // SoLoud's 3D rendering is stereo panning + distance attenuation. The
+  // listener is placed once at the origin facing -Z (see [initSoloud]); every
+  // 3D source is positioned relative to it. IMPORTANT: SoLoud's default
+  // attenuation model is 0 (NO_ATTENUATION) — distance is inaudible unless a
+  // model is set, so every 3D handle explicitly sets one below.
+  static const int _attenuationLinear = 2; // SoLoud LINEAR_DISTANCE model
+
+  // Wandering base loop (feature 1): the base environment loop slowly orbits
+  // the listener on a gentle ellipse so the ambience feels alive without ever
+  // becoming directional or faint. The orbit radius sits close to the min
+  // distance and uses a rolloff well under 1 with a generous max distance, so
+  // the loop's volume only breathes by a couple of percent across a full
+  // orbit — the base loop must always remain the dominant sound.
+  static const double _wanderOrbitPeriodSeconds = 240.0; // 4-minute full orbit
+  static const double _wanderRadiusX = 3.0; // left/right (pan) swing
+  static const double _wanderRadiusZ = 1.5; // front/back swing (subtle)
+  static const double _wanderMinDistance = 1.0; // full volume within this
+  static const double _wanderMaxDistance = 30.0; // generous → gentle falloff
+  static const double _wanderRolloff = 0.5; // well under 1 → subtle drift
+  static const Duration _wanderUpdateInterval = Duration(milliseconds: 750);
+  Timer? _wanderTimer;
+
   // Position tracking for long-running playback
   DateTime? _playbackStartTime;
   // Elapsed playback accumulated across pause/resume cycles. _playbackStartTime
@@ -101,6 +124,13 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         rethrow;
       }
     }
+
+    // Establish an explicit 3D listener at the origin facing -Z. All 3D sources
+    // (the wandering base loop and spatial one-shots) are positioned relative
+    // to this listener. Set once here so 3D playback is deterministic.
+    _soloud.set3dListenerPosition(0, 0, 0);
+    _soloud.set3dListenerAt(0, 0, -1);
+    _soloud.set3dListenerUp(0, 1, 0);
   }
 
   /// Load an audio source from asset path
@@ -150,13 +180,23 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         ),
       );
 
-      // Play with gapless looping
-      final handle = _soloud.play(
+      // Play with gapless looping as a 3D source so it can wander around the
+      // listener. Phase 0 places it at (0, 0, radiusZ) — directly in front.
+      final handle = _soloud.play3d(
         audioSource,
+        0,
+        0,
+        _wanderRadiusZ,
         volume: 1.0,
         looping: true,
         loopingStartAt: Duration.zero,
       );
+      _soloud.set3dSourceMinMaxDistance(
+        handle,
+        _wanderMinDistance,
+        _wanderMaxDistance,
+      );
+      _soloud.set3dSourceAttenuation(handle, _attenuationLinear, _wanderRolloff);
 
       _baseHandle = handle;
       _currentSound = sound;
@@ -164,6 +204,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       // Start position tracking from zero for the newly started sound
       _accumulatedPosition = Duration.zero;
       _startPositionTracking();
+
+      // Begin the slow orbit (derives its phase from the tracked position).
+      _startWanderTimer();
 
       // Update playback state
       _updatePlaybackState(playing: true);
@@ -323,6 +366,33 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     _randomLayerTimers[layer.id] = timer;
   }
 
+  /// Start (or restart) the slow orbit of the base loop around the listener.
+  ///
+  /// Cancels any existing timer first so duplicate play() calls can't stack
+  /// motion. The orbit phase is derived from the tracked playback position, so
+  /// it naturally continues where it left off across pause/resume.
+  void _startWanderTimer() {
+    _wanderTimer?.cancel();
+    _updateWanderPosition(); // apply immediately, don't wait a full interval
+    _wanderTimer = Timer.periodic(
+      _wanderUpdateInterval,
+      (_) => _updateWanderPosition(),
+    );
+  }
+
+  /// Move the base loop along its elliptical orbit based on elapsed playback
+  /// time. A low update rate is plenty for minutes-long motion (battery).
+  void _updateWanderPosition() {
+    final handle = _baseHandle;
+    if (handle == null) return;
+
+    final tSeconds = _currentPosition.inMilliseconds / 1000.0;
+    final phase = 2 * pi * (tSeconds / _wanderOrbitPeriodSeconds);
+    final x = _wanderRadiusX * sin(phase);
+    final z = _wanderRadiusZ * cos(phase);
+    _soloud.set3dSourcePosition(handle, x, 0, z);
+  }
+
   /// Get a random value within a range
   double _randomInRange(double min, double max) {
     return min + _random.nextDouble() * (max - min);
@@ -371,6 +441,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       // Restart position tracking from current position
       _startPositionTracking();
 
+      // Resume the base loop's orbit (phase continues from tracked position).
+      _startWanderTimer();
+
       _updatePlaybackState(playing: true);
     } catch (e) {
       debugPrint('❌ Error resuming: $e');
@@ -389,6 +462,10 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       for (final handle in _continuousLayerHandles.values) {
         _soloud.setPause(handle, true);
       }
+
+      // Stop the base loop's orbit while paused (resumed by play()).
+      _wanderTimer?.cancel();
+      _wanderTimer = null;
 
       // Cancel random event timers so one-shots stop firing while paused.
       // Sources and enabled state are left intact so play() can reschedule.
@@ -419,6 +496,10 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     try {
       // Stop position tracking
       _stopPositionTracking();
+
+      // Stop the base loop's orbit
+      _wanderTimer?.cancel();
+      _wanderTimer = null;
 
       // Stop base sound
       _soloud.stop(_baseHandle!);
