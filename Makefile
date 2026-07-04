@@ -1,14 +1,24 @@
-.PHONY: help clean build-android build-ios build-macos build-linux build-dmg build-all release-android release-macos release-linux
+.PHONY: help clean test build-android build-ios build-macos build-linux build-dmg build-all release-android release-macos release-linux
 
 APP_NAME := StillFlow
 VERSION := $(shell grep '^version:' pubspec.yaml | awk '{print $$2}' | cut -d'+' -f1)
 BUILD_NUMBER := $(shell grep '^version:' pubspec.yaml | awk '{print $$2}' | cut -d'+' -f2)
+
+# Flutter writes Linux builds to an arch-specific directory
+LINUX_ARCH := $(if $(filter aarch64,$(shell uname -m)),arm64,x64)
+# flutter_soloud's bundled codec libs (FLAC/Opus/Ogg/Vorbis) are x86-64 only;
+# on arm64 link against system libraries instead (requires libflac-dev
+# libopus-dev libogg-dev libvorbis-dev)
+ifeq ($(shell uname -m),aarch64)
+LINUX_BUILD_ENV := TRY_SYSTEM_LIBS_FIRST=1
+endif
 
 help:
 	@echo "StillFlow - Build Commands"
 	@echo ""
 	@echo "Development:"
 	@echo "  make clean              - Clean build artifacts"
+	@echo "  make test               - Run all tests (Linux only; builds bundle first)"
 	@echo ""
 	@echo "Build:"
 	@echo "  make build-android      - Build Android APK"
@@ -45,10 +55,16 @@ build-macos:
 	flutter build macos --release
 	@echo "✅ macOS app built: build/macos/Build/Products/Release/$(APP_NAME).app"
 
+# flutter test does not compile native plugin code, so the flutter_soloud
+# library must already exist and be on the loader path; build the Linux
+# bundle first and point LD_LIBRARY_PATH at it.
+test: build-linux
+	LD_LIBRARY_PATH=$(CURDIR)/build/linux/$(LINUX_ARCH)/release/bundle/lib flutter test
+
 build-linux:
 	@echo "Building Linux app..."
-	flutter build linux --release
-	@echo "✅ Linux app built: build/linux/x64/release/bundle/"
+	$(LINUX_BUILD_ENV) flutter build linux --release
+	@echo "✅ Linux app built: build/linux/$(LINUX_ARCH)/release/bundle/"
 
 build-dmg: build-macos
 	@echo "Creating DMG installer..."
@@ -86,6 +102,6 @@ release-macos: build-dmg
 release-linux: build-linux
 	@echo "Preparing Linux release..."
 	@mkdir -p releases
-	@cd build/linux/x64/release/bundle && tar -czf ../../../../../releases/StillFlow-$(VERSION)-linux-x64.tar.gz *
-	@echo "✅ Linux release ready: releases/StillFlow-$(VERSION)-linux-x64.tar.gz"
-	@ls -lh releases/StillFlow-$(VERSION)-linux-x64.tar.gz
+	@cd build/linux/$(LINUX_ARCH)/release/bundle && tar -czf ../../../../../releases/StillFlow-$(VERSION)-linux-$(LINUX_ARCH).tar.gz *
+	@echo "✅ Linux release ready: releases/StillFlow-$(VERSION)-linux-$(LINUX_ARCH).tar.gz"
+	@ls -lh releases/StillFlow-$(VERSION)-linux-$(LINUX_ARCH).tar.gz

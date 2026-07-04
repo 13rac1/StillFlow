@@ -33,13 +33,14 @@ flutter run -d android
 # List available devices
 flutter devices
 
-# Run all tests
-flutter test
+# Run all tests (Linux: builds the desktop bundle first so the
+# flutter_soloud native library is available — see Common Issues)
+make test
 
-# Run tests with coverage
-flutter test --coverage
+# Run all tests directly (requires a prior Linux build)
+LD_LIBRARY_PATH=$PWD/build/linux/<arch>/release/bundle/lib flutter test
 
-# Run specific test file
+# Run specific test file (pure model/widget tests need no native library)
 flutter test test/models/sound_test.dart
 
 # Clean build artifacts
@@ -220,6 +221,21 @@ Ensure:
 - `AudioService.init()` is called before any playback
 - `MediaItem` is set when playing (see `audio_handler.dart:67-73`)
 - Platform permissions are configured (Android: FOREGROUND_SERVICE, iOS: Background Modes)
+
+### Tests Fail with "Failed to load dynamic library 'libflutter_soloud_plugin.so'"
+
+`flutter test` does not compile native plugin code, but any test that constructs
+`SoLoudAudioHandler` loads flutter_soloud's native library over FFI. Build the
+Linux desktop bundle first and put its `lib/` directory on `LD_LIBRARY_PATH` —
+`make test` does both steps.
+
+### Linux Build Failures (missing headers / wrong format)
+
+- `fatal error: 'alsa/asoundlib.h' file not found` — install `libasound2-dev`
+- `libFLAC.so: error adding symbols: file in wrong format` — flutter_soloud's
+  bundled codec libraries are x86-64 only. On arm64 hosts install `libflac-dev
+  libopus-dev libogg-dev libvorbis-dev` and build with
+  `TRY_SYSTEM_LIBS_FIRST=1` (automatic via `make build-linux`).
 
 ### Build Failures
 

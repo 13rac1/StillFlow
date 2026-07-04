@@ -99,18 +99,43 @@ Linux:
 flutter build linux --release
 ```
 
-## Running Tests
+Linux builds require the ALSA development headers:
 
 ```bash
-# Run all tests
-flutter test
+sudo apt-get install libasound2-dev
+```
+
+On arm64 hosts (Raspberry Pi, ARM servers, Apple-silicon VMs), flutter_soloud's bundled codec libraries are x86-64 only, so install the system codec packages and link against them instead:
+
+```bash
+sudo apt-get install libflac-dev libopus-dev libogg-dev libvorbis-dev
+TRY_SYSTEM_LIBS_FIRST=1 flutter build linux --release
+```
+
+`make build-linux` sets `TRY_SYSTEM_LIBS_FIRST` automatically on arm64.
+
+## Running Tests
+
+On Linux, use the Makefile target:
+
+```bash
+make test
+```
+
+Tests that touch the audio handler load flutter_soloud's native library over FFI, but `flutter test` does not compile native plugin code. Running `flutter test` on its own therefore fails with `Failed to load dynamic library 'libflutter_soloud_plugin.so'`. `make test` builds the Linux desktop bundle first and puts its `lib/` directory on `LD_LIBRARY_PATH`, or do the same manually:
+
+```bash
+flutter build linux --release
+LD_LIBRARY_PATH=$PWD/build/linux/<arch>/release/bundle/lib flutter test
 
 # Run tests with coverage
-flutter test --coverage
+LD_LIBRARY_PATH=$PWD/build/linux/<arch>/release/bundle/lib flutter test --coverage
 
-# Run specific test file
+# Run specific test file (pure model/widget tests work without the library)
 flutter test test/models/sound_test.dart
 ```
+
+where `<arch>` is `x64` or `arm64` depending on your host.
 
 ## Development Testing
 
