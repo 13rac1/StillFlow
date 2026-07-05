@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import '../models/mix_settings.dart';
 import '../models/sound.dart';
 
 /// Audio handler that wraps flutter_soloud with audio_service for media controls
@@ -111,6 +112,22 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   // Current environment and enabled layers
   Sound? _currentSound;
   final Set<String> _enabledLayers = {};
+
+  // --- User mix scalars (seeded from SoundMixSettings, see playSound) ---
+  // User volume multiplies the layer's authored min/max random range so the
+  // "breathing" randomization is preserved at any slider position; 1.0 (the
+  // default) reproduces the authored loudness exactly. For continuous layers
+  // the random draw made at enable time is kept in _continuousLayerBaseVolume
+  // so live volume changes rescale it instead of re-randomizing the layer.
+  // Event frequency (0 rare … 1 often, 0.5 = authored) scales random layers'
+  // interval range via eventIntervalMultiplier. All cleared by stop().
+  final Map<String, double> _layerUserVolume = {};
+  final Map<String, double> _layerEventFrequency = {};
+  final Map<String, double> _continuousLayerBaseVolume = {};
+
+  double _userVolumeFor(String layerId) => _layerUserVolume[layerId] ?? 1.0;
+  double _eventFrequencyFor(String layerId) =>
+      _layerEventFrequency[layerId] ?? 0.5;
 
   bool get isPlaying => _baseHandle != null && playbackState.value.playing;
   Sound? get currentSound => _currentSound;
@@ -279,8 +296,12 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     }
   }
 
-  /// Play a sound (base loop only, without layers)
-  Future<void> playSound(Sound sound) async {
+  /// Play a sound, optionally with a desired [mix]
+  ///
+  /// With a [mix], its per-layer volume/frequency scalars are seeded and its
+  /// enabled layers started; without one, the sound's authored
+  /// defaultEnabledLayers are used (previous behavior).
+  Future<void> playSound(Sound sound, {SoundMixSettings? mix}) async {
     try {
       // Stop current playback if any
       if (_baseHandle != null) {
@@ -335,14 +356,18 @@ class SoLoudAudioHandler extends BaseAudioHandler {
 
       debugPrint('🔊 Playing: ${sound.name} (gapless loop)');
 
-      // If this is an EnvironmentSound, auto-enable default layers
+      // Enable the desired mix's layers, or the authored defaults without one
       if (sound is EnvironmentSound) {
-        for (final layer in sound.defaultEnabledLayers) {
-          await toggleLayer(layer.id, true);
+        if (mix != null) _seedMixScalars(mix);
+        final layerIds =
+            mix?.enabledLayerIds ??
+            {for (final layer in sound.defaultEnabledLayers) layer.id};
+        for (final layerId in layerIds) {
+          await toggleLayer(layerId, true);
         }
         // Re-emit so listeners (e.g. HomeScreen's enabled-layer sync) observe
         // the auto-enabled layers instead of the pre-enable snapshot above.
-        if (sound.defaultEnabledLayers.isNotEmpty) {
+        if (layerIds.isNotEmpty) {
           _updatePlaybackState(playing: true);
         }
       }
@@ -383,7 +408,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     try {
       if (layer.layerType == LayerType.continuous) {
         final audioSource = await _loadAudioSource(layer.assetPaths.first);
-        final volume = _randomInRange(layer.minVolume, layer.maxVolume);
+        // Keep the random draw so live user-volume changes rescale it rather
+        // than re-randomizing the layer's loudness.
+        final base = _randomInRange(layer.minVolume, layer.maxVolume);
+        _continuousLayerBaseVolume[layer.id] = base;
+        final volume = _userVolumeFor(layer.id) * base;
         final pan = _randomInRange(layer.minPan, layer.maxPan);
 
         final handle = _soloud.play(
@@ -427,6 +456,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       _soloud.stop(_continuousLayerHandles[layerId]!);
       _continuousLayerHandles.remove(layerId);
     }
+    // The user's volume/frequency scalars are desired state and survive a
+    // toggle; only the per-enable random draw is discarded.
+    _continuousLayerBaseVolume.remove(layerId);
 
     if (_randomLayerTimers.containsKey(layerId)) {
       _randomLayerTimers[layerId]!.cancel();
@@ -445,13 +477,16 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       return;
     }
 
-    final delaySeconds =
-        _random.nextInt(
-          layer.maxIntervalSeconds! - layer.minIntervalSeconds! + 1,
-        ) +
-        layer.minIntervalSeconds!;
+    // Scale the authored interval range by the user's rare→often setting.
+    // Computed in milliseconds so heavily scaled ranges don't collapse to a
+    // single integer-second value.
+    final multiplier = eventIntervalMultiplier(_eventFrequencyFor(layer.id));
+    final delayMs = _randomInRange(
+      layer.minIntervalSeconds! * 1000.0 * multiplier,
+      layer.maxIntervalSeconds! * 1000.0 * multiplier,
+    ).round();
 
-    final timer = Timer(Duration(seconds: delaySeconds), () async {
+    final timer = Timer(Duration(milliseconds: delayMs), () async {
       try {
         // Defense in depth: don't play or reschedule while paused/stopped.
         if (!playbackState.value.playing) return;
@@ -459,9 +494,11 @@ class SoLoudAudioHandler extends BaseAudioHandler {
         final sources = _randomLayerSources[layer.id];
         if (sources == null || sources.isEmpty) return;
 
-        // Pick a random variant
+        // Pick a random variant; user volume scales the authored range
         final audioSource = sources[_random.nextInt(sources.length)];
-        final volume = _randomInRange(layer.minVolume, layer.maxVolume);
+        final volume =
+            _userVolumeFor(layer.id) *
+            _randomInRange(layer.minVolume, layer.maxVolume);
 
         // Spawn on a circle around the listener. The layer's own
         // minVolume/maxVolume stays the play3d volume; distance attenuation
@@ -622,11 +659,66 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     return min + _random.nextDouble() * (max - min);
   }
 
-  /// Set volume for a specific layer
-  void setLayerVolume(String layerId, double volume) {
-    if (_continuousLayerHandles.containsKey(layerId)) {
-      final handle = _continuousLayerHandles[layerId]!;
-      _soloud.setVolume(handle, volume);
+  /// Seed the per-layer user scalars from a desired [mix], rescaling any
+  /// live continuous voices to their new user volume.
+  void _seedMixScalars(SoundMixSettings mix) {
+    for (final entry in mix.layers.entries) {
+      _layerUserVolume[entry.key] = entry.value.volume;
+      _layerEventFrequency[entry.key] = entry.value.frequency;
+      final handle = _continuousLayerHandles[entry.key];
+      final base = _continuousLayerBaseVolume[entry.key];
+      if (handle != null && base != null) {
+        _soloud.setVolume(handle, entry.value.volume * base);
+      }
+    }
+  }
+
+  /// Reconcile the audible state to a desired [mix] while playing: seed the
+  /// volume/frequency scalars, then enable/disable layers to match. Used
+  /// after resume, when the desired mix may have changed while paused.
+  Future<void> applyMix(SoundMixSettings mix) async {
+    if (_currentSound is! EnvironmentSound) return;
+
+    _seedMixScalars(mix);
+
+    final desired = mix.enabledLayerIds;
+    final current = Set<String>.from(_enabledLayers);
+    for (final layerId in current.difference(desired)) {
+      await _disableLayer(layerId);
+    }
+    for (final layerId in desired.difference(current)) {
+      await toggleLayer(layerId, true);
+    }
+  }
+
+  /// Set a layer's user volume multiplier (0.0–1.0, 1.0 = authored loudness).
+  ///
+  /// Continuous layers update live (rescaling their preserved random draw);
+  /// random layers pick the new value up on their next one-shot.
+  void setLayerUserVolume(String layerId, double volume) {
+    final v = volume.clamp(0.0, 1.0);
+    _layerUserVolume[layerId] = v;
+    final handle = _continuousLayerHandles[layerId];
+    final base = _continuousLayerBaseVolume[layerId];
+    if (handle != null && base != null) {
+      _soloud.setVolume(handle, v * base);
+    }
+  }
+
+  /// Set a random layer's event frequency (0.0 rare … 1.0 often, 0.5 =
+  /// authored cadence). If an event is pending while playing, it is
+  /// rescheduled so the new cadence applies now rather than after the
+  /// previously drawn (possibly very long) delay elapses.
+  void setLayerEventFrequency(String layerId, double value) {
+    _layerEventFrequency[layerId] = value.clamp(0.0, 1.0);
+
+    if (!playbackState.value.playing) return;
+    if (!_randomLayerTimers.containsKey(layerId)) return;
+    if (_currentSound is! EnvironmentSound) return;
+    final layer = (_currentSound as EnvironmentSound).getLayerById(layerId);
+    if (layer != null) {
+      // _scheduleRandomEvent replaces the pending timer (cancel-before-assign)
+      _scheduleRandomEvent(layer);
     }
   }
 
@@ -758,6 +850,9 @@ class SoLoudAudioHandler extends BaseAudioHandler {
       _thunderRollTimers.clear();
 
       _enabledLayers.clear();
+      _layerUserVolume.clear();
+      _layerEventFrequency.clear();
+      _continuousLayerBaseVolume.clear();
       _currentSound = null;
 
       // Clear media item
