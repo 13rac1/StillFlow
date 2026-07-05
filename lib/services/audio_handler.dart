@@ -70,6 +70,22 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   static const double _thunderRecedeFactor = 1.6; // ends this× farther out
   static const Duration _thunderRollInterval = Duration(milliseconds: 500);
 
+  // --- Audio interruption handling (calls, alarms, Siri, other apps) ---
+  // Playback must survive interruptions (see CLAUDE.md: the sound stopping is
+  // product failure). On iOS an interruption deactivates our audio session and
+  // the OS never reactivates it for us — without listening for the end event,
+  // reactivating, and resuming, a 20-second call means silence until morning.
+  // Android delivers the equivalent audio-focus events through the same
+  // stream. Desktop platforms emit no interruption events, so this is inert
+  // there. Transient ducks (e.g. a navigation prompt) lower the global volume
+  // instead of pausing — masking should continue quietly rather than stop.
+  static const double _duckVolumeFactor = 0.3;
+  AudioSession? _session;
+  StreamSubscription<AudioInterruptionEvent>? _interruptionSubscription;
+  StreamSubscription<void>? _becomingNoisySubscription;
+  bool _resumeOnInterruptionEnd = false;
+  double? _volumeBeforeDuck;
+
   // Position tracking for long-running playback
   DateTime? _playbackStartTime;
   // Elapsed playback accumulated across pause/resume cycles. _playbackStartTime
@@ -130,9 +146,14 @@ class SoLoudAudioHandler extends BaseAudioHandler {
           usage: AndroidAudioUsage.media,
         ),
         androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-        androidWillPauseWhenDucked: true,
+        // Deliver transient-can-duck focus losses as duck events (handled by
+        // lowering volume) rather than converting them to pauses — a masking
+        // app should get quieter for a navigation prompt, not stop.
+        androidWillPauseWhenDucked: false,
       ),
     );
+    _session = session;
+    _attachAudioSessionListeners(session);
 
     try {
       await _soloud.init();
@@ -156,6 +177,81 @@ class SoLoudAudioHandler extends BaseAudioHandler {
     _soloud.set3dListenerPosition(0, 0, 0);
     _soloud.set3dListenerAt(0, 0, -1);
     _soloud.set3dListenerUp(0, 1, 0);
+  }
+
+  /// Attach interruption/route listeners exactly once (initSoloud can run
+  /// again after a partial-failure retry; `??=` keeps this idempotent).
+  void _attachAudioSessionListeners(AudioSession session) {
+    _interruptionSubscription ??= session.interruptionEventStream.listen(
+      _handleInterruptionEvent,
+    );
+
+    // A disappearing output route (headphones unplugged, Bluetooth earbuds
+    // died mid-night) is deliberately a no-op: for a masking app, continuing
+    // on the device speaker is the CORRECT behavior — the sound must never
+    // stop. Do not add media-app-style auto-pause here.
+    _becomingNoisySubscription ??= session.becomingNoisyEventStream.listen((_) {
+      debugPrint('🔈 Output route lost — continuing playback (by design)');
+    });
+  }
+
+  /// React to audio interruptions so playback survives them.
+  ///
+  /// Hard interruptions (phone call, alarm, Siri) pause playback and set a
+  /// flag; when the OS signals the interruption ended with permission to
+  /// resume, the session is reactivated (required on iOS) and playback
+  /// resumes. Transient ducks lower the global volume instead of pausing.
+  Future<void> _handleInterruptionEvent(AudioInterruptionEvent event) async {
+    if (event.begin) {
+      switch (event.type) {
+        case AudioInterruptionType.duck:
+          // Guard against repeated duck-begins so the pre-duck volume isn't
+          // overwritten with an already-ducked value.
+          if (_volumeBeforeDuck == null) {
+            _volumeBeforeDuck = _soloud.getGlobalVolume();
+            _soloud.setGlobalVolume(_volumeBeforeDuck! * _duckVolumeFactor);
+            debugPrint('🔉 Ducked for transient interruption');
+          }
+        case AudioInterruptionType.pause:
+        case AudioInterruptionType.unknown:
+          // Only arm the resume flag when this interruption is what paused
+          // us. A begin arriving while already paused (user pause, or a
+          // nested interruption) must not clear a previously armed flag.
+          if (playbackState.value.playing) {
+            _resumeOnInterruptionEnd = true;
+            await pause();
+            debugPrint('⏸️  Paused by interruption; will resume when it ends');
+          }
+      }
+      return;
+    }
+
+    switch (event.type) {
+      case AudioInterruptionType.duck:
+        final restore = _volumeBeforeDuck;
+        if (restore != null) {
+          _volumeBeforeDuck = null;
+          _soloud.setGlobalVolume(restore);
+          debugPrint('🔊 Restored volume after duck');
+        }
+      case AudioInterruptionType.pause:
+        if (_resumeOnInterruptionEnd) {
+          _resumeOnInterruptionEnd = false;
+          // iOS deactivated the session for the interruption and will not
+          // reactivate it for us; do so before resuming voices.
+          try {
+            await _session?.setActive(true);
+          } catch (e) {
+            debugPrint('⚠️  Could not reactivate audio session: $e');
+          }
+          await play();
+          debugPrint('▶️  Resumed after interruption');
+        }
+      case AudioInterruptionType.unknown:
+        // The OS declined to say we should resume (e.g. another media app
+        // took over for good). The user chose that audio; respect it.
+        _resumeOnInterruptionEnd = false;
+    }
   }
 
   /// Load an audio source from asset path
@@ -803,6 +899,12 @@ class SoLoudAudioHandler extends BaseAudioHandler {
   /// Dispose of all resources
   Future<void> dispose() async {
     try {
+      // Stop listening to audio session events
+      await _interruptionSubscription?.cancel();
+      _interruptionSubscription = null;
+      await _becomingNoisySubscription?.cancel();
+      _becomingNoisySubscription = null;
+
       // Stop position tracking timer
       _stopPositionTracking();
 
