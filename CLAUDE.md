@@ -4,7 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-StillFlow is a Flutter sleep and meditation sounds app with true gapless audio looping, background playback, and full media control integration. Built with flutter_soloud for native-level gapless looping and audio_service for system media controls.
+StillFlow is a Flutter ambient sound app for **sleep and study/focus** with true gapless audio looping, background playback, and full media control integration. Built with flutter_soloud for native-level gapless looping and audio_service for system media controls.
+
+## Product Direction & Principles
+
+StillFlow is a **continuous masking machine**: it plays layered ambient soundscapes indefinitely, for sleeping and for focused work. If the sound stops, the sleep or focus stops. Every design decision follows from that.
+
+1. **There will NEVER be a sleep timer.** No timers, no fade-to-stop, no alarms, no scheduled stops, no "wind-down" features that end playback. These are anti-features — do not propose or implement them.
+2. **Playback must survive indefinitely.** 8+ hour sessions are the normal case. Interruptions (calls, alarms, other apps) must auto-resume; long sessions must not leak memory, strand timers, or drain battery. If a Bluetooth route disappears mid-session, continuing on the device speaker is the *correct* behavior (masking continues) — never add media-app-style auto-pause on route change.
+3. **Consistency over drama.** Soundscapes may evolve in *texture* but the overall masking level stays steady — no loudness swells, no lulls. The sound must never successfully demand attention. Random one-shot events (thunder, birds) should be user-controllable in density, down to zero.
+4. **Desktop is first-class.** macOS and Linux are explicitly supported because study/focus happens at a desk. Never adopt a package that is web/mobile-only.
+5. **Offline and private.** All audio ships in the app; no analytics, no accounts, no network.
+
+**Near-term priorities** (in order): audio-interruption auto-resume; persistence + one-tap resume of the last mix; fade-in/out on play/pause/layer toggles; per-layer volume and event-density controls (configurable before playback starts); long-session soak audit; a brown/pink-noise + fan environment and a repeatable sound-curation pipeline; more environments (ocean, fireplace).
+
+**Long-term:** true HRTF binaural rendering via a new open-source FFI package wrapping Steam Audio + miniaudio (working name `phonon_audio`). The plan lives in `docs/spatial-audio-package-plan.md` on the `spatial-audio-plan` branch. The current SoLoud 3D positioning is an interim step toward that.
 
 **Key Technologies:**
 - **flutter_soloud**: Native SoLoud integration for gapless, low-latency audio playback
@@ -98,7 +112,14 @@ The app uses a **single audio handler** built on flutter_soloud and audio_servic
    - `initSoloud()` owns the full startup sequence: it configures the platform
      `AudioSession` (mix-with-others, Android audio attributes, focus gain)
      BEFORE calling `_soloud.init()`, and retries once (deinit/reinit) on failure
-     to handle hot restart
+     to handle hot restart; it also sets up the 3D listener (at origin, facing -Z)
+   - Spatializes audio with SoLoud's 3D voices (see Spatial Audio below):
+     the base loop slowly orbits ("wander"), random one-shots play at random
+     azimuths/distances, and thunder events sweep across the sky via
+     per-voice roll timers
+   - Timer lifecycle: wander/roll/random-event timers are cancelled in
+     `pause()`/`stop()` and cancel-before-assign on duplicate `playSound()` —
+     preserve this pattern when adding timed behavior
    - Updates media controls and notification state
    - Handles play/pause/stop commands from system controls
    - Uses `LoadMode.disk` for streaming long audio files
@@ -154,6 +175,27 @@ final handle = await _soloud.play(
 
 **Critical:** Audio files MUST be in OGG Vorbis format for gapless support. MP3/M4A have gap issues.
 
+### Spatial Audio (SoLoud 3D — interim)
+
+Sounds are placed with `play3d()` / `set3dSourcePosition()`. Key facts learned from SoLoud's source (`soloud_core_3d.cpp`) that constrain how we use it:
+
+- **SoLoud's 3D panning is game-style, not binaural.** Per-ear volume is
+  `(dot(speaker_dir, source_dir) + 1) / 2` with default stereo speakers at
+  normalized (±0.894, 0, 0.447). A source directly beside the listener gets a
+  ~95/5 ear split (~25 dB) — far too harsh for a sleep app.
+- **Therefore: keep positioned sources ahead of the listener.** The base-loop
+  wander orbit is centered at z = -6 (in front), radius 2.0 × 1.5, which bounds
+  the worst-case inter-ear ratio to ~4.6 dB. Don't move sources beside/behind
+  the listener until HRTF lands.
+- **Attenuation is OFF by default** (model 0 = no attenuation). Every 3D voice
+  must call `set3dSourceMinMaxDistance()` + `set3dSourceAttenuation()` or
+  distance is inaudible.
+- **Keep 3D velocity at 0** — nonzero velocity engages doppler pitch-shift.
+- Every 3D setter in flutter_soloud's bindings auto-calls `update3dAudio()`;
+  no manual commit is needed.
+- Tuning constants (orbit period/radii, one-shot distance ranges, thunder
+  sweep/recede) are named constants at the top of `audio_handler.dart`.
+
 ### Audio File Requirements
 
 - **Format:** OGG Vorbis (`.ogg` extension)
@@ -206,6 +248,12 @@ macOS can run directly:
 ```bash
 flutter run -d macos
 ```
+
+**CocoaPods is removed.** All plugins resolve as Swift Packages, so the iOS and
+macOS projects have no Podfile and no `[CP]` build phases. Contributors need a
+Flutter version with Swift Package Manager support enabled. Do not reintroduce
+Podfiles; if a future plugin lacks SwiftPM support, `flutter build` will say so
+explicitly — treat that as a reason to pick a different plugin.
 
 ## Common Issues & Solutions
 
