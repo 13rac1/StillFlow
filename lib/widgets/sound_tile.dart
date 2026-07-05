@@ -1,24 +1,37 @@
 import 'package:flutter/material.dart';
+import '../models/mix_settings.dart';
 import '../models/sound.dart';
+import 'layer_control_row.dart';
 
 /// A tile widget representing a single sound in the library
 ///
-/// Displays the sound name, description, and play/pause control
-/// For EnvironmentSound, shows expandable layer controls
+/// Displays the sound name, description, and play/pause control.
+/// For EnvironmentSound, shows expandable layer controls (switch, volume,
+/// and event-frequency sliders) — available whether or not the sound is
+/// playing, so a mix can be configured before pressing play.
 class SoundTile extends StatefulWidget {
   final Sound sound;
   final bool isPlaying;
   final VoidCallback onTap;
-  final Set<String> enabledLayers;
+
+  /// Desired mix for this sound (from the settings store). Falls back to the
+  /// layers' authored defaults when null.
+  final SoundMixSettings? mixSettings;
   final Function(String layerId, bool enabled)? onLayerToggle;
+  final Function(String layerId, double volume)? onLayerVolumeChanged;
+  final Function(String layerId, double value)? onLayerFrequencyChanged;
+  final Function(String layerId, double value)? onLayerFrequencyChangeEnd;
 
   const SoundTile({
     super.key,
     required this.sound,
     required this.isPlaying,
     required this.onTap,
-    this.enabledLayers = const {},
+    this.mixSettings,
     this.onLayerToggle,
+    this.onLayerVolumeChanged,
+    this.onLayerFrequencyChanged,
+    this.onLayerFrequencyChangeEnd,
   });
 
   @override
@@ -118,7 +131,7 @@ class _SoundTileState extends State<SoundTile> {
                       ),
                     ),
                   // Expand/collapse button for environment sounds
-                  if (hasLayers && widget.isPlaying)
+                  if (hasLayers)
                     IconButton(
                       icon: Icon(
                         _isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -135,8 +148,7 @@ class _SoundTileState extends State<SoundTile> {
             ),
           ),
           // Layer controls (expandable)
-          if (hasLayers && widget.isPlaying && _isExpanded)
-            _buildLayerControls(context),
+          if (hasLayers && _isExpanded) _buildLayerControls(context),
         ],
       ),
     );
@@ -163,65 +175,22 @@ class _SoundTileState extends State<SoundTile> {
           ),
           const SizedBox(height: 12),
           ...environment.layers.map((layer) {
-            final isEnabled = widget.enabledLayers.contains(layer.id);
+            final settings =
+                widget.mixSettings?.layers[layer.id] ??
+                LayerSettings(enabled: layer.enabledByDefault);
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          layer.name,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: isEnabled
-                                    ? Theme.of(context).colorScheme.onSurface
-                                    : Theme.of(context).colorScheme.onSurface
-                                          .withValues(alpha: 0.5),
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              layer.layerType == LayerType.continuous
-                                  ? Icons.loop
-                                  : Icons.bolt,
-                              size: 12,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              layer.layerType == LayerType.continuous
-                                  ? 'Continuous'
-                                  : 'Random',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.5),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Switch(
-                    value: isEnabled,
-                    onChanged: widget.onLayerToggle != null
-                        ? (value) {
-                            widget.onLayerToggle!(layer.id, value);
-                          }
-                        : null,
-                    activeThumbColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
+              child: LayerControlRow(
+                layer: layer,
+                settings: settings,
+                onToggle: (enabled) =>
+                    widget.onLayerToggle?.call(layer.id, enabled),
+                onVolumeChanged: (volume) =>
+                    widget.onLayerVolumeChanged?.call(layer.id, volume),
+                onFrequencyChanged: (value) =>
+                    widget.onLayerFrequencyChanged?.call(layer.id, value),
+                onFrequencyChangeEnd: (value) =>
+                    widget.onLayerFrequencyChangeEnd?.call(layer.id, value),
               ),
             );
           }),

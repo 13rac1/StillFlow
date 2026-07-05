@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stillflow/screens/home_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    // The settings store loads during HomeScreen init; without mock values
+    // the prefs plugin is missing in widget tests.
+    SharedPreferences.setMockInitialValues({});
+  });
 
   group('HomeScreen', () {
     // Note: These tests verify UI structure only
