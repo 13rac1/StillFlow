@@ -212,7 +212,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => EqualizerControls(audioHandler: _audioHandler!),
+      builder: (context) => EqualizerControls(
+        audioHandler: _audioHandler!,
+        onChanged: _settingsStore.updateEqualizer,
+      ),
     );
   }
 
